@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.next/
+**/TestResults/
+.env
+.env.*
+!.env.example
+*.pfx
+*.tsbuildinfo
+output/
+.playwright-cli/
+**/.local/
