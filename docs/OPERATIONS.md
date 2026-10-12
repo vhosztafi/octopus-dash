@@ -1,0 +1,32 @@
+# Operations and commissioning
+
+## Security
+The browser talks only to Next.js. Every server fetch/Server Action verifies a signed session; proxy.ts also protects all routes except login/static framework assets. Cookies are httpOnly, Secure, SameSite=Lax, eight-hour expiry. Changing APP_PASSWORD_HASH revokes sessions. Login throttling is global to the single web process (10 attempts/15 minutes). Successful login resets it. Logout action deletes the cookie.
+
+The API uses a constant-time comparison of SHA-256 hashes of the full internal bearer header, requires a 32-character token on startup, and protects OpenAPI too. Only its minimal private /health endpoint is unauthenticated. Compose publishes no API or SQL port. Use HTTPS for the web app; local HTTP on localhost is only for development. CSP prohibits remote connections and embedding; Next's inline runtime requires unsafe-inline. Passwords and secrets never appear in API errors or connection responses. HTTP header logging is disabled; redaction protects destructured token/password properties.
+
+The API and worker use Data Protection application name EnergyDash and purpose EnergyDash.Secrets, with a shared EF key ring encrypted by the mounted PFX. Production refuses to start without the certificate. Environment credentials override database credentials. Tesla's refresh seed is fingerprinted: a changed env seed overrides the stored token, while an unchanged seed allows the rotated DB token to be reused. Refresh is locked in SQL and new access/refresh/expiry are saved in one transaction. Do not retry refresh POSTs automatically.
+
+## Backups
+Use SQL Server native FULL backups to a mounted backup directory (add a bind mount in a local Compose override), then copy the backup off-host. Back up the Data Protection PFX and its password separately; losing it makes stored secrets unreadable even with a database backup. Restore drill: start matching x64 SQL image, restore EnergyDash, mount the original PFX, restore deployment env values, then start API and worker. Avoid copying live MDF/LDF files. A cold named-volume snapshot requires stopping SQL first. Never run `docker compose down -v` unless deliberately removing household history.
+
+## Job behavior
+All Quartz cron schedules use Europe/London. Pipeline jobs share one JobKey and DisallowConcurrentExecution to serialize ingestion/materialization. Startup runs account/rate/consumption/dispatch/Tesla refresh. Source failures are written to SyncLog and do not stop other startup sources. Weekly settings are checked each minute. The SQL command queue is single-worker, persists commands across restart and reclaims interrupted claims after 30 minutes.
+
+Consumption, rates, dispatches and settings trigger re-pricing. Both fuels' slots/day rows are replaced atomically per London date. Standing charges are once per day. Prices include VAT and have decimal precision. Gas recalculation uses raw historical units and the current calorific value. Empty/missing readings and missing rates remain null, with partial total warnings; zero is reserved for an actual zero reading. Latest complete day requires both fuels, rates and standing charges.
+
+Tesla history is Wh. Intervals above 30 minutes or irregular gaps are rejected and logged rather than redistributed into invented half-hours. Short intervals are allocated by overlap; confirm actual account payload/granularity before trusting battery aggregates. Live integration uses trapezoidal positive-grid watts, splits at slot boundaries and skips gaps above two minutes. Gapped/late-start slots are flagged and suppressed for live alerts. This trades alert availability for avoiding false meter estimates.
+
+## Alerts and delivery
+AlertEvent has a unique rule/subject key. Early and full threshold events use separate rule identities, so a warning does not consume the full alert. Events are persisted before sending. Cooldown records suppressed events; deliveries record success/failure by channel without exposing credentials. Meter reconciliation stores metered values and dedupes existing full alerts; optional reconciliation notifications use a separate dedupe identity. Gas alerts require a fully priced complete day including standing charge.
+
+MailKit uses required STARTTLS unless SSL-on-connect is configured. ntfy sends only when a topic is configured. No test runs send real messages. Current delivery is at-most-once: a crash after sending but before recording success can leave a Pending event, and failed alert deliveries are recorded without automatic retries. ReportRun prevents duplicate weekly emails; failed runs can be requeued, but a Sending run after interruption requires inspection before resetting it to avoid duplicate email. Add a durable outbox with provider idempotency in a follow-up phase if guaranteed delivery is required.
+
+Weekly reports share the dashboard's weekly query, render a Razor component with inline styles and optionally attach UTC-identified CSV. Complete meter/rate coverage is required before delivery. On Sunday evening, the most recently completed week is still the previous Monday–Sunday. Missing-week retries and finer report status need commissioning; do not assert a report sent solely because the API returned Queued.
+
+## Account-specific follow-ups
+- Authenticate and verify live SmartFlex schema/device ID; current flexPlannedDispatches takes deviceId, while legacy account-number queries are deprecated. Planned snapshots persist even after disappearing from the next response. They are a fallback estimate, not proof of active EV charging.
+- Confirm the six-hour charging cap and rollout against account terms. Current official Octopus explanation distinguishes the car's standard rate after cap/Boost from the home's off-peak rate, including at night; the supplied brief's outside-window whole-house approximation is retained behind an opt-in switch and TODO(verify). Device and active charging disaggregation needs a follow-up before calling this rule billing exact.
+- Capture genuinely redacted account/consumption/rates/dispatch/Tesla payloads. Current fixtures are synthetic examples matching the official field shapes, not real recordings.
+- Run fresh SQL migration/idempotency tests on the Docker Linux engine and a deployment smoke test.
+- Verify SMTP/ntfy test delivery only when destinations are explicitly configured by the owner.

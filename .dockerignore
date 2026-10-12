@@ -1,0 +1,10 @@
+.git
+.local
+.planning
+output
+**/bin
+**/obj
+**/node_modules
+**/.next
+.env
+**/*.pfx
