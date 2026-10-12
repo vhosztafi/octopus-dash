@@ -1,0 +1,648 @@
+<!doctype html>
+<!--
+  Home Energy Dashboard — clickable prototype (single file, no build step).
+  ALL FIGURES ARE SAMPLE DATA. This file is the visual + interaction reference
+  for the real Next.js implementation described in AGENT_INSTRUCTIONS.md.
+  Navigation: hash routes #/day, #/slots, #/weekly, #/settings.
+  Settings (peak limit, gas limit, dispatch pricing) feed through to the other screens.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home Energy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#0E1214; --panel:#151B1E; --panel-2:#1C2427; --line:#222B2E; --line-2:#2A3437; --line-3:#3A4548;
+  --text:#E8ECEA; --text-2:#C9D1CF; --muted:#A9B4B2; --faint:#8A9694; --disabled:#5C6866;
+  --offpeak:#4F9BE0; --dispatch:#B6DBFB; --peak:#F2994A; --peak-dim:#7A5233;
+  --gas:#C9A6F5; --standing:#5C6866; --good:#6FD39A; --link:#8CC4F5;
+  --warn-bg:#241711; --warn-line:#6B3A1F; --warn-text:#F7C9A3; --warn-sub:#D8C3B5;
+  --sans:'Archivo','Helvetica Neue',sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.45}
+a{color:var(--link)} a:hover{color:#BFDDF9}
+button,input,select{font:inherit}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.wrap{max-width:1320px;margin:0 auto;padding:24px 24px 56px;display:flex;flex-direction:column;gap:20px}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.between{justify-content:space-between}
+
+/* header */
+.brand{font-weight:700;font-size:20px;letter-spacing:-.01em}
+.nav{display:flex;flex-wrap:wrap;gap:4px}
+.nav a{padding:11px 14px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
+.nav a[aria-current="page"]{background:var(--panel-2);color:var(--text);font-weight:600}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* buttons */
+.btn{height:44px;padding:0 16px;border-radius:8px;border:1px solid var(--line-2);background:var(--panel);color:var(--text);font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn.primary{background:var(--text);color:var(--bg);border:none;font-weight:600}
+.btn.ghost{background:transparent;border-color:var(--line-3);font-weight:600}
+.btn.icon{width:44px;padding:0;justify-content:center}
+.btn:disabled{color:var(--disabled);cursor:default}
+
+/* surfaces */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{margin:0;font-size:17px;font-weight:600}
+.panel .sub{font-size:13px;color:var(--muted)}
+h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.01em}
+.status{display:flex;flex-wrap:wrap;gap:8px 20px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.status span{display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+.dot.off{background:var(--disabled)}
+.pill{padding:1px 8px;border:1px solid var(--line-3);border-radius:99px}
+.alert{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border:1px solid var(--warn-line);background:var(--warn-bg);border-radius:10px}
+.alert .t{font-weight:600}
+.alert .d{font-size:13px;color:var(--warn-sub);font-family:var(--mono)}
+.alert a{padding:10px 14px;border-radius:8px;border:1px solid var(--warn-line);text-decoration:none;color:var(--warn-text);font-weight:600}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.kpi .l{font-size:13px;color:var(--muted)}
+.kpi .v{font-family:var(--mono);font-size:28px;font-weight:500;letter-spacing:-.02em}
+.kpi .s{font-size:12px;color:var(--muted)}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--text-2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none}
+.sw.sm{width:10px;height:10px}
+
+.split{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch}
+.split > .main{flex:999 1 640px}
+.split > .side{flex:1 1 300px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(520px,100%),1fr));gap:16px;align-items:start}
+
+/* charts */
+.scroll{overflow-x:auto}
+.chart{min-width:720px;display:flex;flex-direction:column;gap:8px}
+.plot{position:relative;height:230px;margin-top:18px}
+.gridline{position:absolute;left:0;right:0;border-top:1px dashed #263033}
+.ylab{position:absolute;right:0;pointer-events:none;background:var(--panel);padding:0 0 0 4px;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.bars{position:absolute;inset:0;display:flex;align-items:flex-end;gap:3px}
+.bars button{flex:1 1 0;min-width:0;padding:0;border:none;border-radius:3px 3px 0 0;cursor:pointer}
+.bars button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--text)}
+.ribbon{display:flex;gap:3px}
+.ribbon div{flex:1 1 0;height:6px;border-radius:2px}
+.xlab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.peakplot{position:relative;height:150px}
+.peakplot .bars{gap:2px}
+.peakplot .bars div{flex:1 1 0;min-width:0;border-radius:2px 2px 0 0}
+.limit{position:absolute;left:0;right:0;border-top:2px dashed var(--peak)}
+.limlab{position:absolute;right:0;font-family:var(--mono);font-size:11px;color:var(--warn-text)}
+
+dl.kv{margin:0;display:grid;grid-template-columns:auto 1fr;gap:10px 16px;font-size:14px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0;text-align:right}
+.note{padding:12px 14px;border-radius:8px;background:var(--panel-2);font-size:13px;color:var(--text-2)}
+.badge{display:inline-flex;margin-top:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;color:var(--bg)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{color:var(--muted);font-size:12px;font-weight:500;text-align:right;padding:0 0 8px}
+thead th.l, td.l, th.l{text-align:left}
+tbody tr{border-top:1px solid var(--line)}
+tbody td, tbody th{padding:9px 0;text-align:right;font-family:var(--mono)}
+tbody th{font-family:var(--sans);font-weight:500;text-align:left}
+tfoot tr{border-top:1px solid var(--line-3);font-weight:600}
+tfoot td, tfoot th{padding:10px 0;text-align:right;font-family:var(--mono)}
+tfoot th{font-family:var(--sans);text-align:left}
+.ledger{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.ledger table{min-width:900px}
+.ledger th,.ledger td{padding-left:16px!important;padding-right:16px!important}
+.ledger thead th{padding-top:14px;padding-bottom:14px}
+.ledger tbody td,.ledger tbody th{padding-top:10px;padding-bottom:10px;white-space:nowrap}
+.ledger tr.over{background:var(--warn-bg)}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{height:44px;padding:0 16px;border-radius:99px;border:1px solid var(--line-2);background:var(--panel);color:var(--text-2);font-size:14px;font-weight:500;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+.meter{position:relative;height:12px;border-radius:99px;background:#263033;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:var(--good)}
+.meter b{position:absolute;top:0;bottom:0;width:2px;background:var(--bg)}
+
+/* weekly */
+.stack-chart{display:flex;align-items:flex-end;gap:14px;height:240px}
+.stack-chart > div{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:6px}
+.stack{display:flex;flex-direction:column-reverse;gap:2px}
+.stack div:first-child{border-radius:0 0 3px 3px}
+.stack div:last-child{border-radius:3px 3px 0 0}
+.days{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.days div{flex:1 1 0;text-align:center}
+.gasrow{display:grid;grid-template-columns:44px 1fr 64px;align-items:center;gap:12px;font-size:13px}
+.gasbar{position:relative;height:18px;background:var(--panel-2);border-radius:4px}
+.gasbar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.gasbar b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text)}
+
+/* forms */
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.field legend{font-size:13px;color:var(--text-2)}
+.input{height:44px;padding:0 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--bg);color:var(--text);color-scheme:dark}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:12px}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:14px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--link)}
+.switch{flex:none;width:52px;height:32px;border-radius:99px;border:none;padding:3px;cursor:pointer;display:flex;background:var(--line-3);justify-content:flex-start}
+.switch[aria-checked="true"]{background:var(--link);justify-content:flex-end}
+.switch span{width:26px;height:26px;border-radius:50%;background:var(--bg)}
+.block{display:flex;flex-direction:column;gap:14px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+.block:last-child{border-bottom:none;padding-bottom:0}
+.block h3{margin:0;font-size:15px;font-weight:600}
+.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:12px}
+.steps .n{width:28px;height:28px;border-radius:50%;background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 18px;border-radius:8px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="row between">
+    <div class="row" style="gap:28px">
+      <div class="brand">Home energy</div>
+      <nav class="nav" aria-label="Sections">
+        <a href="#/day" data-route="day">Day</a>
+        <a href="#/slots" data-route="slots">Half-hours</a>
+        <a href="#/weekly" data-route="weekly">Weekly report</a>
+        <a href="#/settings" data-route="settings">Settings &amp; alerts</a>
+      </nav>
+    </div>
+    <div class="hdr-right" id="hdr-right"></div>
+  </header>
+  <main id="view" style="display:flex;flex-direction:column;gap:20px"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ------------------------------------------------------------------ *
+ *  SAMPLE DATA — replace with real API data in the implementation.    *
+ * ------------------------------------------------------------------ */
+const TARIFF = { peak: 27.5, offpeak: 7.5, gas: 6.12, elecStanding: 53.6, gasStanding: 31.4 }; // pence, inc VAT
+const GAS_KWH = 38.4;
+const DAY_LABEL = 'Sun 11 Oct 2026';
+
+const DEFAULTS = {
+  peakLimit: 0.30, gasLimit: 3.00, priceDispatchOffpeak: true,
+  peakAlertOn: true, gasAlertOn: true, weeklyOn: true,
+  peakSource: 'tesla', cooldown: '60', weekDay: 'mon', weekTime: '08:00', gasUnit: 'm3',
+  selectedSlot: 36, slotFilter: 'all'
+};
+let state = { ...DEFAULTS };
+try { const s = JSON.parse(localStorage.getItem('he-proto') || 'null'); if (s) state = { ...state, ...s }; } catch (e) {}
+function save() { try { localStorage.setItem('he-proto', JSON.stringify(state)); } catch (e) {} }
+function setState(patch) { state = { ...state, ...patch }; save(); render(); }
+
+const COLORS = { off: 'var(--offpeak)', disp: 'var(--dispatch)', peak: 'var(--peak)', peakDim: 'var(--peak-dim)' };
+const BAND_LABEL = { off: 'Off-peak · scheduled window', disp: 'Off-peak · smart-charge dispatch', peak: 'Peak' };
+const BAND_SHORT = { off: 'Off-peak', disp: 'Off-peak (dispatch)', peak: 'Peak' };
+const SOURCE = { off: 'Tariff window 23:30–05:30', disp: 'Smart-charge dispatch', peak: 'Tariff schedule' };
+
+const hhmm = i => { const m = (i * 30) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+const gbp = p => '£' + (p / 100).toFixed(2);
+const gbpPounds = v => '£' + v.toFixed(2);
+
+/** Builds 48 priced half-hour slots for the sample day. */
+function buildDay() {
+  const band = i => (i >= 47 || i < 11) ? 'off' : (i >= 26 && i <= 28) ? 'disp' : 'peak';
+  const house = i => i < 12 ? 0.25 : i < 18 ? 0.45 : i < 34 ? 0.3 : i < 44 ? 0.65 : 0.35;
+  const spikes = { 15: 0.12, 36: 0.42, 37: 0.35, 40: 0.18 };
+  const out = [];
+  for (let i = 0; i < 48; i++) {
+    const b = band(i), h = house(i);
+    let imp, batt;
+    if (b === 'peak') { imp = spikes[i] ?? 0.02 + ((i * 7) % 5) * 0.01; batt = -Math.max(0, h - imp); }
+    else { const ev = (i <= 7 || b === 'disp') ? 3.5 : 0; const ch = (i >= 1 && i <= 8) ? 1.5 : (b === 'disp' ? 0.8 : 0); imp = h + ev + ch; batt = ch; }
+    // Pricing rule: dispatch slots billed at off-peak only when the setting is on.
+    const rate = b === 'peak' || (b === 'disp' && !state.priceDispatchOffpeak) ? TARIFF.peak : TARIFF.offpeak;
+    out.push({ i, band: b, house: h, imp, batt, rate, cost: imp * rate, over: b === 'peak' && imp > state.peakLimit });
+  }
+  return out;
+}
+
+function dayTotals(slots) {
+  const sum = (pred, f = s => s.imp) => slots.filter(pred).reduce((a, s) => a + f(s), 0);
+  const offK = sum(s => s.band === 'off'), dispK = sum(s => s.band === 'disp'), peakK = sum(s => s.band === 'peak');
+  const offC = sum(s => s.band === 'off', s => s.cost), dispC = sum(s => s.band === 'disp', s => s.cost), peakC = sum(s => s.band === 'peak', s => s.cost);
+  const energyC = offC + dispC + peakC, impK = offK + dispK + peakK;
+  const elecC = energyC + TARIFF.elecStanding, gasC = GAS_KWH * TARIFF.gas + TARIFF.gasStanding;
+  const battIn = sum(s => s.batt > 0, s => s.batt), battOut = -sum(s => s.batt < 0, s => s.batt);
+  return { offK, dispK, peakK, offC, dispC, peakC, energyC, impK, elecC, gasC, battIn, battOut, flagged: slots.filter(s => s.over) };
+}
+
+const WEEK = [
+  { name: 'Mon', off: 1.95, peak: 0.42, gas: 2.40 }, { name: 'Tue', off: 2.60, peak: 0.31, gas: 2.55 },
+  { name: 'Wed', off: 1.20, peak: 0.88, gas: 2.70 }, { name: 'Thu', off: 2.85, peak: 0.27, gas: 3.35 },
+  { name: 'Fri', off: 1.70, peak: 0.36, gas: 2.90 }, { name: 'Sat', off: 3.10, peak: 0.52, gas: 3.12 },
+  { name: 'Sun', off: 4.27, peak: 0.61, gas: 2.66 }
+];
+const WEEK_PEAK_EVENTS = [
+  ['Mon', '18:00–18:30', 0.34], ['Wed', '07:30–08:00', 0.31], ['Wed', '17:30–18:00', 0.52], ['Wed', '18:00–18:30', 0.47],
+  ['Fri', '19:00–19:30', 0.33], ['Sat', '12:00–12:30', 0.38], ['Sat', '18:30–19:00', 0.36], ['Sun', '18:00–18:30', 0.42], ['Sun', '18:30–19:00', 0.35]
+];
+const PREV_WEEK_TOTAL = 34.80;
+
+/* ------------------------------------------------------------------ *
+ *  Views                                                              *
+ * ------------------------------------------------------------------ */
+const ICON = {
+  left: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
+  right: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>',
+  warn: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--peak)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>',
+  download: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>'
+};
+const kpi = k => `<div class="kpi"><div class="l">${k.label}</div><div class="v" style="color:${k.color || 'var(--text)'}">${k.value}</div><div class="s">${k.sub}</div></div>`;
+
+function viewDay() {
+  const slots = buildDay(), t = dayTotals(slots), L = state.peakLimit;
+  const sel = slots[state.selectedSlot] ?? slots[36];
+  document.getElementById('hdr-right').innerHTML = `
+    <button class="btn icon" aria-label="Previous day" data-action="todo" data-msg="Day navigation: load previous day from /api/day?date=">${ICON.left}</button>
+    <div style="padding:0 12px;text-align:center"><div style="font-weight:600">${DAY_LABEL}</div><div style="font-size:12px" class="muted">Yesterday · latest complete day</div></div>
+    <button class="btn icon" aria-label="Next day" disabled>${ICON.right}</button>`;
+
+  const alert = t.flagged.length && state.peakAlertOn ? `
+    <div class="alert" role="status">
+      <div class="row" style="gap:12px">${ICON.warn}<div>
+        <div class="t">Peak-time alert · ${t.flagged.length} half-hour${t.flagged.length === 1 ? '' : 's'} above ${L.toFixed(2)} kWh</div>
+        <div class="d">${t.flagged.map(s => `${hhmm(s.i)} ${s.imp.toFixed(2)} kWh (${s.cost.toFixed(1)}p)`).join('  ·  ')}</div>
+      </div></div>
+      <a href="#/slots" data-filter="over">Review half-hours</a>
+    </div>` : '';
+
+  const kpis = [
+    { label: 'Total cost', value: gbp(t.elecC + t.gasC), sub: 'Electricity + gas incl. standing charges' },
+    { label: 'Electricity', value: gbp(t.elecC), sub: t.impK.toFixed(1) + ' kWh imported' },
+    { label: 'Effective unit rate', value: (t.energyC / t.impK).toFixed(2) + 'p', sub: 'Per kWh, excl. standing charge', color: 'var(--link)' },
+    { label: 'Imported off-peak', value: Math.round((t.offK + (state.priceDispatchOffpeak ? t.dispK : 0)) / t.impK * 100) + '%', sub: t.dispK.toFixed(1) + ' kWh in dispatch slots', color: 'var(--link)' },
+    { label: 'Peak import', value: t.peakK.toFixed(2) + ' kWh', sub: `${t.flagged.length} slots over ${L.toFixed(2)} kWh`, color: t.flagged.length ? 'var(--peak)' : 'var(--text)' },
+    { label: 'Gas', value: gbp(t.gasC), sub: `${GAS_KWH.toFixed(1)} kWh · daily limit ${gbpPounds(state.gasLimit)}`, color: t.gasC / 100 > state.gasLimit ? 'var(--warn-text)' : 'var(--text)' }
+  ];
+
+  const bars = slots.map(s => {
+    const color = s.band === 'peak' ? (s.over ? COLORS.peak : COLORS.peakDim) : COLORS[s.band];
+    return `<button data-slot="${s.i}" aria-pressed="${s.i === sel.i}" aria-label="${hhmm(s.i)}, ${s.imp.toFixed(2)} kWh, ${s.cost.toFixed(1)}p" style="height:${Math.max(3, Math.round(s.imp / 6 * 230))}px;background:${color}"></button>`;
+  }).join('');
+  const ribbon = slots.map(s => `<div style="background:${COLORS[s.band]}"></div>`).join('');
+
+  const note = sel.band === 'peak'
+    ? (sel.over ? `Above the ${L.toFixed(2)} kWh alert limit. Powerwall supplied ${(-sel.batt).toFixed(2)} kWh; the rest came from the grid at peak rate.` : 'Within the alert limit. Powerwall covered most of the house load.')
+    : (sel.rate === TARIFF.peak ? 'Dispatch pricing is switched off in Settings, so this slot is shown at the peak rate.'
+       : `Billed at off-peak. At the peak rate this slot would have cost ${(sel.imp * TARIFF.peak).toFixed(1)}p.${sel.band === 'disp' ? ' Detected from the EV charging dispatch, not the fixed window.' : ''}`);
+
+  const pos = Math.round(Math.min(L, 0.5) / 0.5 * 150);
+  const peakBars = slots.filter(s => s.i >= 11 && s.i <= 46).map(s =>
+    `<div style="height:${s.band === 'peak' ? Math.max(2, Math.round(Math.min(s.imp, 0.5) / 0.5 * 150)) : 0}px;background:${s.over ? COLORS.peak : COLORS.peakDim}"></div>`).join('');
+
+  const bandRows = [
+    ['Off-peak window', COLORS.off, t.offK.toFixed(2), TARIFF.offpeak.toFixed(2) + 'p', gbp(t.offC)],
+    ['Dispatch slots', COLORS.disp, t.dispK.toFixed(2), (state.priceDispatchOffpeak ? TARIFF.offpeak : TARIFF.peak).toFixed(2) + 'p', gbp(t.dispC)],
+    ['Peak', COLORS.peak, t.peakK.toFixed(2), TARIFF.peak.toFixed(2) + 'p', gbp(t.peakC)],
+    ['Elec. standing', 'var(--standing)', '–', TARIFF.elecStanding.toFixed(2) + 'p/d', gbp(TARIFF.elecStanding)],
+    ['Gas', 'var(--gas)', GAS_KWH.toFixed(2), TARIFF.gas.toFixed(2) + 'p', gbp(GAS_KWH * TARIFF.gas)],
+    ['Gas standing', 'var(--standing)', '–', TARIFF.gasStanding.toFixed(2) + 'p/d', gbp(TARIFF.gasStanding)]
+  ].map(r => `<tr><th><span class="row" style="gap:8px"><span class="sw sm" style="background:${r[1]}"></span>${r[0]}</span></th><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('');
+
+  return `
+  <div class="status">
+    <span><span class="dot"></span>Octopus meter data to 23:59 Sun</span>
+    <span><span class="dot"></span>Tesla gateway live · synced 06:38</span>
+    <span><span class="dot"></span>Rates matched per half-hour incl. dispatches</span>
+    <span class="pill">Sample figures</span>
+  </div>
+  ${alert}
+  <section class="kpis" aria-label="Day totals">${kpis.map(kpi).join('')}</section>
+
+  <div class="split">
+    <section class="panel main" aria-label="Grid import by half-hour" style="gap:16px">
+      <div class="row between" style="align-items:baseline;gap:12px">
+        <div><h2>Grid import by half-hour</h2><div class="sub">Each bar is billed at the rate that applied in that slot. Select a bar for detail.</div></div>
+        <div class="legend">
+          <span><span class="sw" style="background:var(--offpeak)"></span>Off-peak window</span>
+          <span><span class="sw" style="background:var(--dispatch)"></span>Smart-charge dispatch</span>
+          <span><span class="sw" style="background:var(--peak)"></span>Peak</span>
+        </div>
+      </div>
+      <div class="scroll"><div class="chart">
+        <div class="plot">
+          <div class="gridline" style="bottom:77px"></div><div class="gridline" style="bottom:153px"></div><div class="gridline" style="bottom:230px"></div>
+          <div class="bars">${bars}</div>
+          <div class="ylab" style="bottom:79px">2 kWh</div><div class="ylab" style="bottom:155px">4 kWh</div><div class="ylab" style="bottom:232px">6 kWh</div>
+        </div>
+        <div class="ribbon">${ribbon}</div>
+        <div class="xlab"><span>00:00</span><span>03:00</span><span>06:00</span><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span><span>21:00</span><span>24:00</span></div>
+      </div></div>
+    </section>
+
+    <aside class="panel side" aria-label="Selected half-hour" style="gap:16px">
+      <div>
+        <div class="sub">Selected half-hour</div>
+        <div class="mono" style="font-size:26px;font-weight:500">${hhmm(sel.i)}–${hhmm(sel.i + 1)}</div>
+        <div class="badge" style="background:${COLORS[sel.band]}">${BAND_LABEL[sel.band]}</div>
+      </div>
+      <dl class="kv">
+        <dt>Unit rate</dt><dd class="mono">${sel.rate.toFixed(2)}p/kWh</dd>
+        <dt>Rate source</dt><dd>${SOURCE[sel.band]}</dd>
+        <dt>Grid import</dt><dd class="mono">${sel.imp.toFixed(2)} kWh</dd>
+        <dt>Cost</dt><dd class="mono" style="font-weight:600">${sel.cost.toFixed(1)}p</dd>
+        <dt>Powerwall</dt><dd class="mono">${sel.batt > 0 ? 'charging +' + sel.batt.toFixed(2) + ' kWh' : sel.batt < 0 ? 'supplying ' + (-sel.batt).toFixed(2) + ' kWh' : 'idle'}</dd>
+        <dt>House load</dt><dd class="mono">${sel.house.toFixed(2)} kWh</dd>
+      </dl>
+      <div class="note">${note}</div>
+    </aside>
+  </div>
+
+  <div class="grid3">
+    <section class="panel" aria-label="Peak-time import against alert limit">
+      <div><h2>Peak-time import vs alert limit</h2><div class="sub">Peak slots only, 05:30–23:30. Dispatch slots excluded.</div></div>
+      <div class="peakplot">
+        <div class="limit" style="bottom:${pos}px"></div>
+        <div class="limlab" style="bottom:${pos + 4}px">limit ${L.toFixed(2)} kWh</div>
+        <div class="bars">${peakBars}</div>
+      </div>
+      <div class="xlab"><span>05:30</span><span>12:00</span><span>18:00</span><span>23:30</span></div>
+    </section>
+
+    <section class="panel" aria-label="Cost by rate">
+      <h2>Cost by rate</h2>
+      <div class="scroll"><table>
+        <thead><tr><th class="l" scope="col">Line</th><th scope="col">kWh</th><th scope="col">Rate</th><th scope="col">Cost</th></tr></thead>
+        <tbody>${bandRows}</tbody>
+        <tfoot><tr><th scope="row">Day total</th><td></td><td></td><td>${gbp(t.elecC + t.gasC)}</td></tr></tfoot>
+      </table></div>
+    </section>
+
+    <section class="panel" aria-label="Powerwall">
+      <div class="row between" style="align-items:baseline"><h2>Powerwall</h2><span class="sub">Live from Tesla</span></div>
+      <div class="row" style="gap:10px;align-items:baseline"><span class="mono" style="font-size:36px;font-weight:500">78%</span><span class="sub">charged now · 20% reserved for outages</span></div>
+      <div class="meter" role="img" aria-label="Battery 78 percent, 20 percent reserve"><i style="width:78%"></i><b style="left:20%"></b></div>
+      <dl class="kv" style="grid-template-columns:1fr auto">
+        <dt>Charged at off-peak rate</dt><dd class="mono">${t.battIn.toFixed(1)} kWh</dd>
+        <dt>Supplied house in peak</dt><dd class="mono">${t.battOut.toFixed(1)} kWh</dd>
+        <dt>Saved vs buying at peak</dt><dd class="mono" style="color:var(--good);font-weight:600">${gbp(t.battOut * (TARIFF.peak - TARIFF.offpeak))}</dd>
+      </dl>
+    </section>
+  </div>`;
+}
+
+function viewSlots() {
+  const slots = buildDay(), f = state.slotFilter;
+  document.getElementById('hdr-right').innerHTML = `<span style="font-weight:600">${DAY_LABEL}</span>
+    <button class="btn" data-action="csv">${ICON.download}Export CSV</button>`;
+  const keep = s => f === 'all' ? true : f === 'over' ? s.over : s.band === f;
+  const shown = slots.filter(keep);
+  const defs = [['all', 'All 48 slots'], ['peak', 'Peak'], ['off', 'Off-peak window'], ['disp', 'Dispatch slots'], ['over', 'Over alert limit']];
+  const chips = defs.map(([id, label]) => {
+    const n = id === 'all' ? 48 : slots.filter(s => id === 'over' ? s.over : s.band === id).length;
+    return `<button class="chip" data-filter-chip="${id}" aria-pressed="${id === f}">${label} · ${n}</button>`;
+  }).join('');
+  const rows = shown.map(s => `
+    <tr class="${s.over ? 'over' : ''}">
+      <th scope="row" class="mono" style="font-family:var(--mono)">${hhmm(s.i)}–${hhmm(s.i + 1)}</th>
+      <td class="l" style="font-family:var(--sans)"><span class="row" style="gap:8px"><span class="sw sm" style="background:${COLORS[s.band]}"></span>${BAND_SHORT[s.band]}</span></td>
+      <td class="l" style="font-family:var(--sans);color:var(--text-2)">${SOURCE[s.band]}</td>
+      <td>${s.rate.toFixed(2)}p</td>
+      <td>${s.imp.toFixed(3)} kWh</td>
+      <td style="color:${s.batt > 0 ? 'var(--link)' : s.batt < 0 ? 'var(--good)' : 'var(--faint)'}">${s.batt > 0 ? '+' + s.batt.toFixed(2) + ' charge' : s.batt < 0 ? s.batt.toFixed(2) + ' supply' : '–'}</td>
+      <td style="font-weight:600">${s.cost.toFixed(2)}p</td>
+      <td class="l" style="font-family:var(--sans);color:var(--warn-text);font-weight:600">${s.over ? 'Over ' + state.peakLimit.toFixed(2) + ' kWh' : ''}</td>
+    </tr>`).join('');
+  const tImp = shown.reduce((a, s) => a + s.imp, 0), tCost = shown.reduce((a, s) => a + s.cost, 0);
+  return `
+  <section style="display:flex;flex-direction:column;gap:6px">
+    <h1>Half-hour ledger</h1>
+    <p class="muted" style="margin:0;max-width:760px">Every slot is priced with the unit rate in force for that half-hour: the tariff's fixed windows, plus any extra cheap slots Octopus granted for smart EV charging. Battery flows come from the Tesla gateway. Sample figures.</p>
+  </section>
+  <div class="chips" role="group" aria-label="Filter slots">${chips}</div>
+  <div class="ledger"><table>
+    <thead><tr><th class="l" scope="col">Half-hour</th><th class="l" scope="col">Rate band</th><th class="l" scope="col">Rate source</th><th scope="col">Unit rate</th><th scope="col">Grid import</th><th scope="col">Powerwall</th><th scope="col">Cost</th><th class="l" scope="col">Alert</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="8" class="l" style="font-family:var(--sans);color:var(--muted)">No slots match this filter.</td></tr>'}</tbody>
+    <tfoot><tr><th scope="row" colspan="4">Total for ${shown.length} slot${shown.length === 1 ? '' : 's'} (excl. standing charge)</th><td>${tImp.toFixed(2)} kWh</td><td></td><td>${gbp(tCost)}</td><td></td></tr></tfoot>
+  </table></div>`;
+}
+
+function viewWeekly() {
+  document.getElementById('hdr-right').innerHTML = `
+    <button class="btn" data-action="todo" data-msg="Load previous week from /api/week?start=">Previous week</button>
+    <button class="btn primary" data-action="todo" data-msg="Would POST /api/reports/weekly/send">Send report now</button>`;
+  const SC = TARIFF.elecStanding / 100, GL = state.gasLimit;
+  const px = v => Math.max(2, Math.round(v / 7 * 200)) + 'px';
+  const tOff = WEEK.reduce((a, d) => a + d.off, 0), tPeak = WEEK.reduce((a, d) => a + d.peak, 0), tGas = WEEK.reduce((a, d) => a + d.gas, 0);
+  const total = tOff + tPeak + tGas + SC * 7, diff = total - PREV_WEEK_TOTAL;
+  const kOff = tOff * 100 / TARIFF.offpeak, kPeak = tPeak * 100 / TARIFF.peak;
+  const overDays = WEEK.filter(d => d.gas > GL).length;
+  const events = WEEK_PEAK_EVENTS.filter(e => e[2] > state.peakLimit);
+  const kpis = [
+    { label: 'Week total', value: gbpPounds(total), sub: 'Electricity + gas incl. standing' },
+    { label: 'vs previous week', value: (diff < 0 ? '−' : '+') + gbpPounds(Math.abs(diff)), sub: 'Previous week ' + gbpPounds(PREV_WEEK_TOTAL), color: diff < 0 ? 'var(--good)' : 'var(--warn-text)' },
+    { label: 'Imported off-peak', value: Math.round(kOff / (kOff + kPeak) * 100) + '%', sub: 'Share of grid kWh, incl. dispatch slots', color: 'var(--link)' },
+    { label: 'Peak-time alerts', value: String(events.length), sub: `Half-hours over ${state.peakLimit.toFixed(2)} kWh`, color: 'var(--peak)' },
+    { label: 'Gas over limit', value: overDays + ' day' + (overDays === 1 ? '' : 's'), sub: 'Daily limit ' + gbpPounds(GL), color: overDays ? 'var(--warn-text)' : 'var(--text)' },
+    { label: 'Powerwall saving', value: '£16.40', sub: 'Peak load shifted to off-peak', color: 'var(--good)' }
+  ];
+  const stacks = WEEK.map(d => `<div>
+      <div class="mono" style="text-align:center;font-size:12px;color:var(--text-2)">${gbpPounds(d.off + d.peak + SC + d.gas)}</div>
+      <div class="stack">
+        <div style="height:${px(d.off)};background:var(--offpeak)"></div><div style="height:${px(d.peak)};background:var(--peak)"></div>
+        <div style="height:${px(SC)};background:var(--standing)"></div><div style="height:${px(d.gas)};background:var(--gas)"></div>
+      </div></div>`).join('');
+  const gasRows = WEEK.map(d => { const over = d.gas > GL; return `
+      <div class="gasrow"><span class="muted">${d.name}</span>
+        <div class="gasbar"><i style="width:${Math.min(100, d.gas / 4 * 100)}%;background:${over ? 'var(--peak)' : 'var(--gas)'}"></i><b style="left:${Math.min(100, GL / 4 * 100)}%"></b></div>
+        <span class="mono" style="text-align:right;color:${over ? 'var(--warn-text)' : 'var(--text)'}">${gbpPounds(d.gas)}</span></div>`; }).join('');
+  const lateEvents = events.filter(e => { const h = parseInt(e[1]); return h >= 17 && h < 19; }).length;
+  return `
+  <section><h1>Week of 5–11 Oct 2026</h1><p class="muted" style="margin:4px 0 0">${state.weeklyOn ? `Emailed every ${state.weekDay === 'mon' ? 'Monday' : 'Sunday'} at ${state.weekTime}` : 'Weekly email is switched off'} · this is the report body. Sample figures.</p></section>
+  <section class="kpis" aria-label="Week totals">${kpis.map(kpi).join('')}</section>
+  <div class="grid2">
+    <section class="panel" aria-label="Daily cost" style="gap:16px">
+      <div class="row between" style="align-items:baseline;gap:12px"><h2>Daily cost</h2>
+        <div class="legend"><span><span class="sw" style="background:var(--offpeak)"></span>Off-peak elec.</span><span><span class="sw" style="background:var(--peak)"></span>Peak elec.</span><span><span class="sw" style="background:var(--standing)"></span>Standing</span><span><span class="sw" style="background:var(--gas)"></span>Gas</span></div>
+      </div>
+      <div class="stack-chart">${stacks}</div>
+      <div class="days">${WEEK.map(d => `<div>${d.name}</div>`).join('')}</div>
+    </section>
+    <section class="panel" aria-label="Gas per day against limit" style="gap:16px">
+      <div><h2>Gas per day vs ${gbpPounds(GL)} limit</h2><div class="sub">Including standing charge. Days over the limit triggered an alert.</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px">${gasRows}</div>
+      <div class="sub" style="font-size:12px">Scale £0–£4 · white mark = limit</div>
+    </section>
+  </div>
+  <div class="grid2">
+    <section class="panel" aria-label="Peak-time alerts this week">
+      <h2>Peak-time alerts this week</h2>
+      <div class="scroll"><table>
+        <thead><tr><th class="l" scope="col">Day</th><th class="l" scope="col">Half-hour</th><th scope="col">Import</th><th scope="col">Cost</th></tr></thead>
+        <tbody>${events.map(e => `<tr><th>${e[0]}</th><td class="l">${e[1]}</td><td style="color:var(--warn-text)">${e[2].toFixed(2)} kWh</td><td>${(e[2] * TARIFF.peak).toFixed(1)}p</td></tr>`).join('') || '<tr><td colspan="4" class="l" style="font-family:var(--sans);color:var(--muted)">No half-hours over the limit.</td></tr>'}</tbody>
+      </table></div>
+    </section>
+    <section class="panel" aria-label="Where the money went">
+      <h2>Where the money went</h2>
+      <dl class="kv" style="grid-template-columns:1fr auto;gap:12px 16px">
+        ${[['Off-peak electricity', 'var(--offpeak)', tOff], ['Peak electricity', 'var(--peak)', tPeak], ['Standing charges (elec.)', 'var(--standing)', SC * 7], ['Gas incl. standing', 'var(--gas)', tGas], ['Total', 'transparent', total]]
+          .map(r => `<dt style="color:var(--text-2);display:flex;align-items:center;gap:8px"><span class="sw sm" style="background:${r[1]}"></span>${r[0]}</dt><dd class="mono">${gbpPounds(r[2])}</dd>`).join('')}
+      </dl>
+      <div class="note">Peak import cost ${gbpPounds(tPeak)} for ${kPeak.toFixed(1)} kWh. ${lateEvents} of ${events.length} alerts fell between 17:00 and 19:00.</div>
+    </section>
+  </div>`;
+}
+
+function sw(key, labelledby) {
+  return `<button class="switch" role="switch" aria-checked="${!!state[key]}" ${labelledby} data-toggle="${key}"><span></span></button>`;
+}
+function sel(id, key, opts, extra = '') {
+  return `<select class="input" id="${id}" data-field="${key}" ${extra}>${opts.map(([v, l]) => `<option value="${v}" ${String(state[key]) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+}
+
+function viewSettings() {
+  document.getElementById('hdr-right').innerHTML = `<button class="btn primary" data-action="todo" data-msg="Settings saved locally in this prototype. Real app: PUT /api/settings">Save changes</button>`;
+  return `
+  <h1>Settings &amp; alerts</h1>
+  <div class="grid2">
+    <section class="panel" aria-labelledby="h-conn" style="padding:22px;gap:20px">
+      <div><h2 id="h-conn" style="font-size:18px">Connections</h2><p class="sub" style="margin:4px 0 0">Keys are stored encrypted on the server and never sent to the browser after saving.</p></div>
+      <div class="block">
+        <div class="row between"><h3>Octopus Energy account</h3><span class="row sub" style="gap:6px"><span class="dot off"></span>Not connected</span></div>
+        <div class="fields">
+          <div class="field"><label for="oe-key">API key</label><input class="input mono" id="oe-key" type="password" placeholder="sk_live_…" autocomplete="off"></div>
+          <div class="field"><label for="oe-acc">Account number</label><input class="input mono" id="oe-acc" type="text" placeholder="A-XXXXXXXX"></div>
+        </div>
+        <dl class="kv" style="font-size:13px;gap:8px 16px">
+          <dt>Electricity meter</dt><dd class="mono" style="text-align:left">Found after connecting (MPAN + serial)</dd>
+          <dt>Gas meter</dt><dd class="mono" style="text-align:left">Found after connecting (MPRN + serial)</dd>
+          <dt>Tariff</dt><dd class="mono" style="text-align:left">Read from agreements, incl. past tariff changes</dd>
+        </dl>
+        <button class="btn ghost" style="align-self:flex-start" data-action="todo" data-msg="Would call POST /api/connections/octopus/test">Test connection</button>
+      </div>
+      <div class="block">
+        <div class="row between"><h3>Tesla Powerwall</h3><span class="row sub" style="gap:6px"><span class="dot off"></span>Not connected</span></div>
+        <div class="fields">
+          <div class="field"><label for="t-key">Access token</label><input class="input mono" id="t-key" type="password" placeholder="Paste token" autocomplete="off"></div>
+          <div class="field"><label for="t-site">Energy site</label><select class="input" id="t-site" disabled><option>Available after connecting</option></select></div>
+        </div>
+        <p class="sub" style="margin:0">Provides live grid import, battery charge/discharge and state of charge every few minutes. Used for live peak alerts, since Octopus meter data usually arrives the next day.</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-tariff" style="padding:22px;gap:18px">
+      <div><h2 id="h-tariff" style="font-size:18px">Pricing</h2><p class="sub" style="margin:4px 0 0">How each half-hour gets its unit rate.</p></div>
+      <ol class="steps">
+        <li><span class="n">1</span><div><div style="font-weight:600">Tariff unit rates by time</div><div class="sub">Fetched from Octopus for the tariff active on that date, with rate validity times, so price changes and tariff switches are respected.</div></div></li>
+        <li><span class="n">2</span><div><div style="font-weight:600">Smart-charge dispatches</div><div class="sub">Extra cheap slots Octopus schedules for EV charging outside the normal window are fetched and override the peak rate for those half-hours.</div></div></li>
+        <li><span class="n">3</span><div><div style="font-weight:600">Standing charges</div><div class="sub">Added per day for electricity and gas, from the same tariff data.</div></div></li>
+      </ol>
+      <div class="row between" style="padding-top:16px;border-top:1px solid var(--line);flex-wrap:nowrap">
+        <div><div style="font-weight:600" id="lbl-disp">Price dispatch slots at off-peak rate</div><div class="sub">Turn off to see what the day would have cost without them.</div></div>
+        ${sw('priceDispatchOffpeak', 'aria-labelledby="lbl-disp"')}
+      </div>
+      <div class="field"><label for="gas-unit">Gas meter reports in</label>${sel('gas-unit', 'gasUnit', [['m3', 'Cubic metres (convert to kWh with calorific value)'], ['kwh', 'kWh']])}</div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-alerts" style="padding:22px;gap:20px">
+      <div><h2 id="h-alerts" style="font-size:18px">Alerts</h2><p class="sub" style="margin:4px 0 0">Coming later. Rules are set up here so the data model is ready.</p></div>
+      <div class="block">
+        <div class="row between" style="flex-wrap:nowrap"><h3 id="lbl-peak">Peak-time usage</h3>${sw('peakAlertOn', 'aria-labelledby="lbl-peak"')}</div>
+        <div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))">
+          <div class="field"><label for="pk-lim">Alert when one half-hour exceeds</label>
+            <div class="row" style="gap:8px"><input class="input mono" style="width:110px" id="pk-lim" type="number" step="0.05" min="0" value="${state.peakLimit.toFixed(2)}" data-field="peakLimit" data-num><span class="muted">kWh</span></div></div>
+          <div class="field"><label for="pk-src">Check using</label>${sel('pk-src', 'peakSource', [['tesla', 'Tesla gateway · live, at end of slot'], ['octopus', 'Octopus meter · next day']])}</div>
+        </div>
+        <label class="check"><input type="checkbox" checked>Ignore smart-charge dispatch slots (they are billed off-peak)</label>
+        <label class="check"><input type="checkbox" checked>Warn mid-slot when the running total passes 80% of the limit</label>
+      </div>
+      <div class="block">
+        <div class="row between" style="flex-wrap:nowrap"><h3 id="lbl-gas">Daily gas cost</h3>${sw('gasAlertOn', 'aria-labelledby="lbl-gas"')}</div>
+        <div class="field"><label for="gas-lim">Alert when a day's gas cost exceeds</label>
+          <div class="row" style="gap:8px"><span class="muted">£</span><input class="input mono" style="width:110px" id="gas-lim" type="number" step="0.25" min="0" value="${state.gasLimit.toFixed(2)}" data-field="gasLimit" data-num><span class="muted">incl. standing charge</span></div></div>
+        <p class="sub" style="margin:0">Checked when the day's gas readings arrive from Octopus, usually the following morning.</p>
+      </div>
+      <div class="block" style="gap:10px">
+        <h3>Send alerts by</h3>
+        <div class="row" style="gap:4px 24px"><label class="check"><input type="checkbox" checked>Push notification</label><label class="check"><input type="checkbox">Email</label></div>
+        <div class="field"><label for="cool">Don't repeat the same alert within</label>${sel('cool', 'cooldown', [['0', 'Always alert'], ['60', '1 hour'], ['180', '3 hours']], 'style="max-width:260px"')}</div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-week" style="padding:22px;gap:18px">
+      <div class="row between" style="flex-wrap:nowrap">
+        <div><h2 id="h-week" style="font-size:18px">Weekly report</h2><p class="sub" style="margin:4px 0 0">Covers Monday to Sunday. <a href="#/weekly">Preview last week's report</a></p></div>
+        ${sw('weeklyOn', 'aria-label="Weekly report"')}
+      </div>
+      <div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))">
+        <div class="field"><label for="wk-day">Send on</label>${sel('wk-day', 'weekDay', [['mon', 'Monday'], ['sun', 'Sunday evening']])}</div>
+        <div class="field"><label for="wk-time">At</label><input class="input mono" id="wk-time" type="time" value="${state.weekTime}" data-field="weekTime"></div>
+      </div>
+      <div class="field"><label for="wk-to">Email to</label><input class="input" id="wk-to" type="email" placeholder="you@example.com"></div>
+      <fieldset class="field" style="margin:0;padding:0;border:none;gap:2px">
+        <legend style="padding:0 0 6px">Include</legend>
+        <label class="check"><input type="checkbox" checked>Cost by day and by rate</label>
+        <label class="check"><input type="checkbox" checked>Peak-time alerts list</label>
+        <label class="check"><input type="checkbox" checked>Gas against daily limit</label>
+        <label class="check"><input type="checkbox" checked>Powerwall saving</label>
+        <label class="check"><input type="checkbox">CSV of all half-hours attached</label>
+      </fieldset>
+      <button class="btn ghost" style="align-self:flex-start" data-action="reset">Reset prototype settings</button>
+    </section>
+  </div>`;
+}
+
+/* ------------------------------------------------------------------ *
+ *  Router + events                                                    *
+ * ------------------------------------------------------------------ */
+const ROUTES = { day: viewDay, slots: viewSlots, weekly: viewWeekly, settings: viewSettings };
+const TITLES = { day: 'Day', slots: 'Half-hours', weekly: 'Weekly report', settings: 'Settings & alerts' };
+function route() { const r = (location.hash.replace(/^#\/?/, '') || 'day').split('?')[0]; return ROUTES[r] ? r : 'day'; }
+let lastRoute = null;
+function render() {
+  const r = route(), view = document.getElementById('view');
+  const focusId = document.activeElement && document.activeElement.id;
+  view.innerHTML = ROUTES[r]();
+  document.querySelectorAll('.nav a').forEach(a => a.getAttribute('data-route') === r ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+  document.title = TITLES[r] + ' · Home energy';
+  if (r !== lastRoute) { window.scrollTo(0, 0); lastRoute = r; }
+  else if (focusId) { const el = document.getElementById(focusId); if (el) el.focus(); }
+}
+window.addEventListener('hashchange', render);
+
+let toastTimer;
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600); }
+
+document.addEventListener('click', e => {
+  const slot = e.target.closest('[data-slot]');
+  if (slot) return setState({ selectedSlot: +slot.dataset.slot });
+  const chip = e.target.closest('[data-filter-chip]');
+  if (chip) return setState({ slotFilter: chip.dataset.filterChip });
+  const link = e.target.closest('a[data-filter]');
+  if (link) { state.slotFilter = link.dataset.filter; save(); return; }
+  const tog = e.target.closest('[data-toggle]');
+  if (tog) return setState({ [tog.dataset.toggle]: !state[tog.dataset.toggle] });
+  const act = e.target.closest('[data-action]');
+  if (!act) return;
+  const a = act.dataset.action;
+  if (a === 'todo') toast(act.dataset.msg);
+  if (a === 'reset') { state = { ...DEFAULTS }; save(); render(); toast('Prototype settings reset'); }
+  if (a === 'csv') {
+    const rows = [['start', 'end', 'band', 'rate_p_per_kwh', 'import_kwh', 'battery_kwh', 'cost_p']]
+      .concat(buildDay().map(s => [hhmm(s.i), hhmm(s.i + 1), s.band, s.rate, s.imp.toFixed(3), s.batt.toFixed(3), s.cost.toFixed(3)]));
+    const url = URL.createObjectURL(new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' }));
+    const dl = Object.assign(document.createElement('a'), { href: url, download: 'half-hours-sample.csv' }); dl.click(); URL.revokeObjectURL(url);
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-field]');
+  if (!el) return;
+  let v = el.value;
+  if (el.hasAttribute('data-num')) { v = parseFloat(v); if (!isFinite(v) || v < 0) return; }
+  setState({ [el.dataset.field]: v });
+});
+
+render();
+</script>
+</body>
+</html>
