@@ -1,0 +1,15 @@
+@namespace EnergyDash.Infrastructure
+@using Microsoft.AspNetCore.Components
+<!doctype html>
+<html><body style="background:#0E1214;color:#E8ECEA;font-family:Arial,sans-serif;padding:24px">
+<div style="max-width:720px;margin:auto"><h1>Home energy</h1><h2>Weekly report · @Report.Monday</h2>
+<p style="font-family:monospace;font-size:28px">£@((Report.Kpis.TotalPence / 100).ToString("0.00"))</p>
+@if (Report.Settings.IncludeCosts) {
+<table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Day</th><th>Electricity</th><th>Gas</th><th>Total</th></tr></thead><tbody>
+@foreach (var day in Report.Days) { <tr style="border-top:1px solid #222B2E"><td style="padding:12px">@day.Name</td><td align="right">£@(((day.OffPence + day.PeakPence + day.StandingPence) / 100).ToString("0.00"))</td><td align="right">£@((day.GasPence / 100).ToString("0.00"))</td><td align="right">£@((day.TotalPence / 100).ToString("0.00"))</td></tr> }
+</tbody></table> }
+@if (Report.Settings.IncludeAlerts) { <h3 style="color:#F2994A">Peak-time alerts</h3>@foreach (var alert in Report.Alerts) { <p>@alert.Date · @alert.Time · @alert.Kwh.ToString("0.00") kWh</p> } }
+@if (Report.Settings.IncludeGas) { <p style="color:#C9A6F5">Gas over £@Report.Settings.GasDailyLimitPounds.ToString("0.00") limit: @Report.GasOverDays days</p> }
+@if (Report.Settings.IncludeBattery) { <p style="color:#6FD39A">Powerwall saving: £@((Report.Kpis.BatterySavingPence / 100).ToString("0.00"))</p> }
+<p style="color:#A9B4B2">VAT included. Daily standing charges included. Europe/London.</p></div></body></html>
+@code { [Parameter, EditorRequired] public WeekDto Report { get; set; } = null!; }
