@@ -10,3 +10,10 @@ Evidence: 18 Core + 27 API/provider/model tests passed; one real SQL test skippe
 Next work: commission Docker SQL and real provider accounts, capture redacted fixtures, verify active charging/cap semantics, test notification destinations and delivery recovery. No private credentials or real messages used during this run.
 
 Latest activity: 2026-10-12 implementation and verification close-out on codex/home-energy.
+
+## Quick Tasks Completed
+| ID | Task | Date | Result |
+|---|---|---|---|
+| 261012-el1 | Enable live local credential testing | 2026-10-12 | Four healthy Docker services; encrypted storage verified; Settings ready for owner credentials |
+
+Current deployment: live Compose mode at localhost:3000, replacing the earlier sample preview. Docker/SQL/certificate blockers are resolved. Full backend suite now passes 46 tests with no skips. Private local login is in ignored secrets/local-access.txt. Provider credentials and live supplier verification remain pending.

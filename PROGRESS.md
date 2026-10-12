@@ -56,3 +56,12 @@ Implemented bcrypt login, bounded attempts, signed eight-hour httpOnly/Secure/La
 
 ### Timestamp regression close-out
 Explicit supplier offsets (including +01:00 on BST and repeated autumn hours) are normalized through DateTimeOffset to UTC before REST/GraphQL domain ingestion. Added provider regression passes; final total is 45 backend plus 7 frontend tests, with one SQL container test skipped.
+
+## 2026-10-12 — live local setup (quick task 261012-el1)
+Docker Desktop is now available. Generated unique local login/SQL/session/internal secrets and a Data Protection PFX, stored in ignored/private .env and secrets/ paths. Created an idempotency-guarded local initializer and ensured public/ exists on a clean checkout for Docker builds.
+
+All four Compose services are built and healthy. Only the web port is published on 127.0.0.1:3000. API applied the SQL migration; worker shares the certificate and database key ring. The previous sample API/web processes belonging to this task were replaced.
+
+The previously skipped SQL integration test passed, including migration, repeated ingest/re-pricing and an encrypted synthetic-secret round trip across separate API/worker service providers. Full backend tests now pass: 18 Core + 28 integration, no skips. Live API reports sample=false; credential routes validate rather than reject sample mode; unauthorized requests remain 401. Browser login and empty credential forms are verified. Accounts without credentials now correctly display Not connected.
+
+The current tab is signed into http://localhost:3000/settings. New sessions use the generated password in secrets/local-access.txt. Actual provider credentials were not entered; supplier connection, active-charging/cap and notification commissioning remain pending. Earlier Docker/certificate/SQL blockers are resolved by this setup.
