@@ -1,0 +1,1 @@
+{"response":{"time_series":[{"timestamp":"2026-10-11T17:00:00Z","grid_energy_imported":100,"consumer_energy_imported_from_grid":100,"consumer_energy_imported_from_battery":200},{"timestamp":"2026-10-11T17:15:00Z","grid_energy_imported":200,"consumer_energy_imported_from_grid":200,"consumer_energy_imported_from_battery":400}]}}

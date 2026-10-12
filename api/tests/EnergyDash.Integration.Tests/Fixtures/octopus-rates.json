@@ -1,0 +1,1 @@
+{"count":2,"next":"https://api.octopus.energy/v1/products/SAMPLE/electricity-tariffs/SAMPLE/standard-unit-rates/?page=2","results":[{"value_exc_vat":7.142857,"value_inc_vat":7.5,"valid_from":"2026-10-11T00:00:00Z","valid_to":null}]}
