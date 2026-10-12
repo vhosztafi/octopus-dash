@@ -42,7 +42,7 @@ public sealed class OctopusGraphClient(HttpClient http, SecretStore secrets, Set
         if (fields.Contains("flexPlannedDispatches") && !string.IsNullOrWhiteSpace(config.SmartFlexDeviceId))
         {
             var data = await QueryAsync("query Dispatches($id: String!) { flexPlannedDispatches(deviceId: $id) { start end energyAddedKwh type } }", new { id = config.SmartFlexDeviceId }, token, ct);
-            var values = data.GetProperty("flexPlannedDispatches").Deserialize<List<FlexDispatch>>(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? [];
+            var values = data.GetProperty("flexPlannedDispatches").Deserialize<List<FlexDispatch>>(ProviderJson.Options) ?? [];
             return values.Select(d => new Dispatch { StartUtc = d.Start, EndUtc = d.End, DeltaKwh = d.EnergyAddedKwh, DeviceId = config.SmartFlexDeviceId, Source = "Flex", IsBoost = d.Type is not null && d.Type != "SMART", FirstSeenUtc = now, LastSeenUtc = now }).ToList();
         }
         var account = await secrets.GetAsync("Octopus__AccountNumber", ct);
@@ -51,7 +51,7 @@ public sealed class OctopusGraphClient(HttpClient http, SecretStore secrets, Set
         {
             var data = await QueryAsync($"query Dispatches($account: String!) {{ {field}(accountNumber: $account) {{ start end delta }} }}", new { account }, token, ct);
             foreach (var row in data.GetProperty(field).EnumerateArray())
-                results.Add(new Dispatch { StartUtc = row.GetProperty("start").GetDateTime(), EndUtc = row.GetProperty("end").GetDateTime(), DeltaKwh = row.TryGetProperty("delta", out var delta) && delta.ValueKind != JsonValueKind.Null ? decimal.Parse(delta.ToString(), System.Globalization.CultureInfo.InvariantCulture) : null, Source = field == "plannedDispatches" ? "Planned" : "Completed", FirstSeenUtc = now, LastSeenUtc = now });
+                results.Add(new Dispatch { StartUtc = row.GetProperty("start").GetDateTimeOffset().UtcDateTime, EndUtc = row.GetProperty("end").GetDateTimeOffset().UtcDateTime, DeltaKwh = row.TryGetProperty("delta", out var delta) && delta.ValueKind != JsonValueKind.Null ? decimal.Parse(delta.ToString(), System.Globalization.CultureInfo.InvariantCulture) : null, Source = field == "plannedDispatches" ? "Planned" : "Completed", FirstSeenUtc = now, LastSeenUtc = now });
         }
         if (results.Count == 0 && fields.Contains("flexPlannedDispatches") && string.IsNullOrWhiteSpace(config.SmartFlexDeviceId)) throw new InvalidOperationException("Set SmartFlex device ID in Settings. Current schema requires deviceId; legacy dispatch queries may be unavailable.");
         return results;

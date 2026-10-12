@@ -7,6 +7,18 @@ namespace EnergyDash.Integration.Tests;
 
 public sealed class ProviderFixtureTests
 {
+    [Fact]
+    public void ExplicitSupplierOffsetsAreNormalizedBeforeUtcStorage()
+    {
+        const string json = "{\"consumption\":0.5,\"interval_start\":\"2026-10-11T01:00:00+01:00\",\"interval_end\":\"2026-10-11T01:30:00+01:00\"}";
+        var row = JsonSerializer.Deserialize<OctopusConsumption>(json, ProviderJson.Options)!;
+        Assert.Equal(new DateTime(2026, 10, 11, 0, 0, 0, DateTimeKind.Utc), row.IntervalStart);
+        Assert.Equal(DateTimeKind.Utc, row.IntervalStart.Kind);
+        Assert.Equal(TimeSpan.FromMinutes(30), row.IntervalEnd - row.IntervalStart);
+        const string dispatch = "{\"start\":\"2026-10-25T01:00:00+01:00\",\"end\":\"2026-10-25T01:30:00+01:00\",\"energyAddedKwh\":\"1.0\",\"type\":\"SMART\"}";
+        var flex = JsonSerializer.Deserialize<FlexDispatch>(dispatch, ProviderJson.Options)!;
+        Assert.Equal(0, flex.Start.Hour); Assert.Equal(DateTimeKind.Utc, flex.Start.Kind);
+    }
     // Synthetic redacted fixtures matching official docs; replace with real recordings during commissioning.
     [Fact]
     public void OctopusRatesParseOpenEndedVatInclusiveValues()

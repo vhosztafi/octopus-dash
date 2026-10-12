@@ -39,7 +39,7 @@ public sealed class OctopusRestClient(HttpClient http, SecretStore secrets)
     {
         var account = await secrets.GetAsync("Octopus__AccountNumber", ct) ?? throw new InvalidOperationException("Octopus account number is not configured.");
         using var response = await GetAsync($"accounts/{Uri.EscapeDataString(account)}/", ct);
-        response.EnsureSuccessStatusCode(); return await response.Content.ReadFromJsonAsync<OctopusAccount>(ct) ?? throw new InvalidOperationException("Empty account response.");
+        response.EnsureSuccessStatusCode(); return await response.Content.ReadFromJsonAsync<OctopusAccount>(ProviderJson.Options, ct) ?? throw new InvalidOperationException("Empty account response.");
     }
     public async Task<IReadOnlyList<T>> PagesAsync<T>(string path, CancellationToken ct)
     {
@@ -48,7 +48,7 @@ public sealed class OctopusRestClient(HttpClient http, SecretStore secrets)
         {
             if (!seen.Add(next)) throw new InvalidOperationException("Octopus pagination loop.");
             using var response = await GetAsync(next, ct); response.EnsureSuccessStatusCode();
-            var page = await response.Content.ReadFromJsonAsync<OctopusPage<T>>(ct) ?? throw new InvalidOperationException("Empty paginated response.");
+            var page = await response.Content.ReadFromJsonAsync<OctopusPage<T>>(ProviderJson.Options, ct) ?? throw new InvalidOperationException("Empty paginated response.");
             result.AddRange(page.Results); next = page.Next;
         }
         return result;
