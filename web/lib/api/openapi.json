@@ -1,0 +1,1395 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "EnergyDash.Api | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5080/"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/days/latest-complete": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LatestDayDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/days/{date}": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/days/{date}/slots": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/days/{date}/slots.csv": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/weeks/{monday}": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "parameters": [
+          {
+            "name": "monday",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeekDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/powerwall/live": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PowerwallDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashboardSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/octopus": {
+      "put": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OctopusCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/tesla": {
+      "put": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeslaCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTestDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/octopus/test": {
+      "post": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTestDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/tesla/test": {
+      "post": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTestDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tesla/sites": {
+      "get": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnergySiteDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sync": {
+      "post": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reports/weekly/send": {
+      "post": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "parameters": [
+          {
+            "name": "week",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommandDto": {
+        "required": [
+          "id",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ConnectionDto": {
+        "required": [
+          "provider",
+          "configured",
+          "hint",
+          "accountNumber",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "hint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ConnectionsDto": {
+        "required": [
+          "octopus",
+          "tesla"
+        ],
+        "type": "object",
+        "properties": {
+          "octopus": {
+            "$ref": "#/components/schemas/ConnectionDto"
+          },
+          "tesla": {
+            "$ref": "#/components/schemas/ConnectionDto"
+          }
+        }
+      },
+      "ConnectionTestDto": {
+        "required": [
+          "ok",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "CostRowDto": {
+        "required": [
+          "label",
+          "band",
+          "kwh",
+          "ratePence",
+          "costPence",
+          "perDay"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "band": {
+            "type": "string"
+          },
+          "kwh": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "ratePence": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "costPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "perDay": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DashboardSettings": {
+        "required": [
+          "priceDispatchAtOffPeak",
+          "dispatchAllowanceEnabled",
+          "dispatchAllowanceSlots",
+          "countScheduledWindowDispatches",
+          "nightStart",
+          "nightEnd",
+          "gasUnit",
+          "calorificValue",
+          "peakLimitKwh",
+          "peakAlertEnabled",
+          "peakSource",
+          "ignoreDispatch",
+          "earlyWarning",
+          "renotifyReconciliation",
+          "gasDailyLimitPounds",
+          "gasAlertEnabled",
+          "notifyPush",
+          "notifyEmail",
+          "cooldownMinutes",
+          "weeklyEnabled",
+          "weekDay",
+          "weekTime",
+          "recipients",
+          "includeCosts",
+          "includeAlerts",
+          "includeGas",
+          "includeBattery",
+          "attachCsv",
+          "historyDays",
+          "teslaSiteId",
+          "smartFlexDeviceId",
+          "pricing"
+        ],
+        "type": "object",
+        "properties": {
+          "priceDispatchAtOffPeak": {
+            "type": "boolean"
+          },
+          "dispatchAllowanceEnabled": {
+            "type": "boolean"
+          },
+          "dispatchAllowanceSlots": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "countScheduledWindowDispatches": {
+            "type": "boolean"
+          },
+          "nightStart": {
+            "type": "string"
+          },
+          "nightEnd": {
+            "type": "string"
+          },
+          "gasUnit": {
+            "type": "string"
+          },
+          "calorificValue": {
+            "type": "number",
+            "format": "double"
+          },
+          "peakLimitKwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "peakAlertEnabled": {
+            "type": "boolean"
+          },
+          "peakSource": {
+            "type": "string"
+          },
+          "ignoreDispatch": {
+            "type": "boolean"
+          },
+          "earlyWarning": {
+            "type": "boolean"
+          },
+          "renotifyReconciliation": {
+            "type": "boolean"
+          },
+          "gasDailyLimitPounds": {
+            "type": "number",
+            "format": "double"
+          },
+          "gasAlertEnabled": {
+            "type": "boolean"
+          },
+          "notifyPush": {
+            "type": "boolean"
+          },
+          "notifyEmail": {
+            "type": "boolean"
+          },
+          "cooldownMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "weeklyEnabled": {
+            "type": "boolean"
+          },
+          "weekDay": {
+            "type": "string"
+          },
+          "weekTime": {
+            "type": "string"
+          },
+          "recipients": {
+            "type": "string"
+          },
+          "includeCosts": {
+            "type": "boolean"
+          },
+          "includeAlerts": {
+            "type": "boolean"
+          },
+          "includeGas": {
+            "type": "boolean"
+          },
+          "includeBattery": {
+            "type": "boolean"
+          },
+          "attachCsv": {
+            "type": "boolean"
+          },
+          "historyDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teslaSiteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "smartFlexDeviceId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/PricingSettings"
+          }
+        }
+      },
+      "DayDto": {
+        "required": [
+          "date",
+          "sample",
+          "complete",
+          "missingSlots",
+          "unpricedSlots",
+          "kpis",
+          "slots",
+          "costByRate",
+          "powerwall",
+          "alerts",
+          "warnings",
+          "settings"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "boolean"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "missingSlots": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unpricedSlots": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KpisDto"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotDto"
+            }
+          },
+          "costByRate": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CostRowDto"
+            }
+          },
+          "powerwall": {
+            "$ref": "#/components/schemas/PowerwallDto"
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotDto"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "settings": {
+            "$ref": "#/components/schemas/DashboardSettings"
+          }
+        }
+      },
+      "EnergySiteDto": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "KpisDto": {
+        "required": [
+          "totalPence",
+          "electricityPence",
+          "gasPence",
+          "importKwh",
+          "effectiveRatePence",
+          "offPeakSharePercent",
+          "peakImportKwh",
+          "gasKwh",
+          "batterySavingPence",
+          "alertCount"
+        ],
+        "type": "object",
+        "properties": {
+          "totalPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "electricityPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "gasPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "importKwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "effectiveRatePence": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "offPeakSharePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "peakImportKwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "gasKwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "batterySavingPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "alertCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "LatestDayDto": {
+        "required": [
+          "date"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "LedgerDto": {
+        "required": [
+          "date",
+          "sample",
+          "filter",
+          "slots",
+          "importKwh",
+          "costPence",
+          "counts",
+          "missingSlots"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "boolean"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotDto"
+            }
+          },
+          "importKwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "costPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "missingSlots": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OctopusCredentials": {
+        "required": [
+          "apiKey",
+          "accountNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          },
+          "accountNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "PowerwallDto": {
+        "required": [
+          "chargePercent",
+          "reservePercent",
+          "gridWatts",
+          "batteryWatts",
+          "loadWatts",
+          "solarWatts",
+          "syncedUtc",
+          "chargedKwh",
+          "dischargedKwh",
+          "savingPence"
+        ],
+        "type": "object",
+        "properties": {
+          "chargePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "reservePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "gridWatts": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "batteryWatts": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "loadWatts": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "solarWatts": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "syncedUtc": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "chargedKwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "dischargedKwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "savingPence": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "PricingSettings": {
+        "type": "object",
+        "properties": {
+          "priceDispatchAtOffPeak": {
+            "type": "boolean",
+            "default": true
+          },
+          "dispatchAllowanceEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "dispatchAllowanceSlots": {
+            "type": "integer",
+            "format": "int32",
+            "default": 12
+          },
+          "countScheduledWindowDispatches": {
+            "type": "boolean",
+            "default": true
+          },
+          "nightStart": {
+            "type": "string",
+            "default": "23:30"
+          },
+          "nightEnd": {
+            "type": "string",
+            "default": "05:30"
+          }
+        }
+      },
+      "SlotDto": {
+        "required": [
+          "startUtc",
+          "endUtc",
+          "startLocal",
+          "endLocal",
+          "localOffset",
+          "band",
+          "ratePence",
+          "rateSource",
+          "kwh",
+          "costPence",
+          "batteryKwh",
+          "houseKwh",
+          "overLimit"
+        ],
+        "type": "object",
+        "properties": {
+          "startUtc": {
+            "type": "string"
+          },
+          "endUtc": {
+            "type": "string"
+          },
+          "startLocal": {
+            "type": "string"
+          },
+          "endLocal": {
+            "type": "string"
+          },
+          "localOffset": {
+            "type": "string"
+          },
+          "band": {
+            "type": "string"
+          },
+          "ratePence": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "rateSource": {
+            "type": "string"
+          },
+          "kwh": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "costPence": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "batteryKwh": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "houseKwh": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "overLimit": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StatusDto": {
+        "required": [
+          "sample",
+          "octopusDataUtc",
+          "teslaSyncUtc",
+          "pricingUtc",
+          "octopusHealth",
+          "teslaHealth",
+          "pricingHealth"
+        ],
+        "type": "object",
+        "properties": {
+          "sample": {
+            "type": "boolean"
+          },
+          "octopusDataUtc": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "teslaSyncUtc": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pricingUtc": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "octopusHealth": {
+            "type": "string"
+          },
+          "teslaHealth": {
+            "type": "string"
+          },
+          "pricingHealth": {
+            "type": "string"
+          }
+        }
+      },
+      "TeslaCredentials": {
+        "required": [
+          "refreshToken",
+          "clientId",
+          "clientSecret"
+        ],
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "clientSecret": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "WeekAlertDto": {
+        "required": [
+          "date",
+          "time",
+          "kwh",
+          "costPence"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "kwh": {
+            "type": "number",
+            "format": "double"
+          },
+          "costPence": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "WeekDayDto": {
+        "required": [
+          "date",
+          "name",
+          "offPence",
+          "peakPence",
+          "standingPence",
+          "gasPence",
+          "totalPence",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "offPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "peakPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "standingPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "gasPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "totalPence": {
+            "type": "number",
+            "format": "double"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WeekDto": {
+        "required": [
+          "monday",
+          "sample",
+          "complete",
+          "days",
+          "kpis",
+          "previousTotalPence",
+          "differencePence",
+          "gasOverDays",
+          "alerts",
+          "settings"
+        ],
+        "type": "object",
+        "properties": {
+          "monday": {
+            "type": "string"
+          },
+          "sample": {
+            "type": "boolean"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeekDayDto"
+            }
+          },
+          "kpis": {
+            "$ref": "#/components/schemas/KpisDto"
+          },
+          "previousTotalPence": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "differencePence": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "gasOverDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeekAlertDto"
+            }
+          },
+          "settings": {
+            "$ref": "#/components/schemas/DashboardSettings"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "EnergyDash.Api"
+    }
+  ]
+}
