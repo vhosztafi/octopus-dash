@@ -1,0 +1,1 @@
+# Conventions: pure decimal domain math; UTC database timestamps; NodaTime London grouping; explicit EF entity configurations; generated web DTO aliases; Server Components and server-only BFF; labelled sample mode. Execute plans autonomously and record external verification gaps in PROGRESS.md.

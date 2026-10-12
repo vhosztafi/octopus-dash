@@ -1,0 +1,2 @@
+# Features
+Day: six KPIs, rate-coloured slot chart, URL selection, cost rows, limits and Powerwall. Ledger: counted filters, UTC-identified CSV, partial data. Weekly: costs, gas, alerts, previous-week coverage and battery estimates. Settings: encrypted provider credentials, tests, site/device selection, pricing, alerts, schedules and recipients. Login and private deployment are required. Home Mini/local gateway/web push remain extension points.
