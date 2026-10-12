@@ -8,3 +8,4 @@ output
 **/.next
 .env
 **/*.pfx
+secrets

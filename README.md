@@ -25,6 +25,8 @@ Open http://localhost:3000 and use `home-energy-sample` for this explicit local 
 
 ## Self-host with real data
 
+For local Windows testing, after installing web dependencies, run `./scripts/Initialize-Local.ps1` once from the repository root, then `docker compose up --build -d`. This generates unique local login/SQL/session credentials and a PFX without printing them. Your dashboard password is saved in `secrets/local-access.txt`; both `.env` and `secrets/` are ignored by Git and excluded from Docker build contexts. The initializer refuses to overwrite an existing setup. Enter provider credentials through Settings; the generated configuration leaves them blank.
+
 1. Use an x64 host with Docker Linux containers and enough RAM for SQL Server. Copy `.env.example` to `.env`.
 2. Choose a password; generate its bcrypt hash with `node -e "require('bcryptjs').hash(process.argv[1],12).then(console.log)" "your-password"` from `web/`. Set `APP_PASSWORD_HASH` in single quotes in `.env`. Generate distinct cryptographically random 32+ character `SESSION_SECRET` and `INTERNAL_API_TOKEN`.
 3. Create a certificate with its private key in PFX format for Data Protection (for example with OpenSSL) and set its path and password. Mount it read-only; ensure the container app user can read it. Keep this certificate backed up outside the repository.

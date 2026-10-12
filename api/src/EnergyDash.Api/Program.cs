@@ -68,7 +68,7 @@ api.MapGet("/connections", async (SecretStore secrets, IDashboardData data, Canc
 {
     if (sample) return new ConnectionsDto(new("octopus", false, null, null, "Not connected · sample mode"), new("tesla", false, null, null, "Not connected · sample mode"));
     var octopus = await secrets.HintAsync("Octopus__ApiKey", ct); var tesla = await secrets.HintAsync("Tesla__RefreshToken", ct); var status = await data.StatusAsync(ct);
-    return new ConnectionsDto(new("octopus", octopus is not null, octopus, await secrets.GetAsync("Octopus__AccountNumber", ct), status.OctopusHealth), new("tesla", tesla is not null, tesla, null, status.TeslaHealth));
+    return new ConnectionsDto(new("octopus", octopus is not null, octopus, await secrets.GetAsync("Octopus__AccountNumber", ct), octopus is null ? "Not connected" : status.OctopusHealth), new("tesla", tesla is not null, tesla, null, tesla is null ? "Not connected" : status.TeslaHealth));
 }).Produces<ConnectionsDto>();
 api.MapPut("/connections/octopus", async (OctopusCredentials value, SecretStore secrets, CancellationToken ct) =>
 {

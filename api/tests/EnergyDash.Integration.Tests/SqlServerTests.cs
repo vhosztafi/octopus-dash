@@ -1,6 +1,10 @@
 using EnergyDash.Core;
 using EnergyDash.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using Testcontainers.MsSql;
 using Xunit;
 
@@ -20,6 +24,36 @@ public sealed class SqlServerTests
         Assert.Equal(1, await db.Set<Consumption>().CountAsync());
         var pricing = new PricingService(db, store); await pricing.RepriceAsync(EnergyTime.ParseDay("2026-10-11"), default); await pricing.RepriceAsync(EnergyTime.ParseDay("2026-10-11"), default);
         Assert.Equal(96, await db.Set<PricedSlot>().CountAsync()); Assert.Equal(2, await db.Set<PricedDay>().CountAsync());
+
+        // Separate providers simulate API and worker processes sharing the persisted key ring.
+        var certificatePath = Path.Combine(Path.GetTempPath(), "energy-dash-test-" + Guid.NewGuid().ToString("N") + ".pfx");
+        const string certificatePassword = "synthetic-test-certificate-password";
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest("CN=EnergyDash Integration Test", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        using var certificate = request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(1));
+        await File.WriteAllBytesAsync(certificatePath, certificate.Export(X509ContentType.Pfx, certificatePassword));
+        try
+        {
+            var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:Default"] = sql.GetConnectionString(),
+                ["DATA_PROTECTION_CERT"] = certificatePath,
+                ["DATA_PROTECTION_CERT_PASSWORD"] = certificatePassword
+            }).Build();
+            static ServiceProvider Provider(IConfiguration configuration) => new ServiceCollection().AddSingleton(configuration).AddLogging().AddEnergyInfrastructure(configuration).BuildServiceProvider(validateScopes: true);
+            using (var apiProvider = Provider(config))
+            using (var scope = apiProvider.CreateScope())
+                await scope.ServiceProvider.GetRequiredService<SecretStore>().PutAsync("Test__Credential", "synthetic-private-value");
+            using (var workerProvider = Provider(config))
+            using (var scope = workerProvider.CreateScope())
+                Assert.Equal("synthetic-private-value", await scope.ServiceProvider.GetRequiredService<SecretStore>().GetAsync("Test__Credential"));
+            db.ChangeTracker.Clear();
+            var stored = await db.Set<EnergyDash.Core.Secret>().SingleAsync(s => s.Key == "Test__Credential");
+            Assert.DoesNotContain("synthetic-private-value", stored.Protected);
+            Assert.Equal("alue", stored.Hint);
+            Assert.NotEmpty(await db.DataProtectionKeys.ToListAsync());
+        }
+        finally { File.Delete(certificatePath); }
     }
 }
 
