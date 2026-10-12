@@ -4,7 +4,7 @@ plan: "01"
 subsystem: energy-dashboard
 tags: [autonomous, verified-source]
 key-files: [api, web, PROGRESS.md]
-metrics: {core_tests: 18, api_provider_tests: 26, web_tests: 7, sql_tests_skipped: 1}
+metrics: {core_tests: 18, api_provider_tests: 27, web_tests: 7, sql_tests_skipped: 1}
 ---
 
 # Security and operational verification
@@ -15,7 +15,7 @@ metrics: {core_tests: 18, api_provider_tests: 26, web_tests: 7, sql_tests_skippe
 - Tests/build/audits, health checks, backup documentation and CI are provided.
 
 ## Validation
-44 .NET tests passed, one SQL test skipped; 7 web tests and production build passed. Docker/certificate deployment and provider commissioning remain external gaps.
+45 .NET tests passed, one SQL test skipped; 7 web tests and production build passed. Docker/certificate deployment and provider commissioning remain external gaps.
 
 ## Commits
 | Commit | Outcome |

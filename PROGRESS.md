@@ -41,7 +41,7 @@ Implemented bcrypt login, bounded attempts, signed eight-hour httpOnly/Secure/La
 
 ### Final verification — 2026-10-12
 - .NET Release solution build: zero warnings/errors.
-- xUnit: 18 Core + 26 API/provider/model tests passed; one real SQL container test skipped explicitly.
+- xUnit: 18 Core + 27 API/provider/model tests passed; one real SQL container test skipped explicitly.
 - Frontend: strict TypeScript, 7 vitest tests and Next.js production build passed.
 - Production npm audit and NuGet transitive vulnerability audit: no known vulnerabilities.
 - OpenAPI → TypeScript generation succeeded; EF model/migration consistency and Compose config validation passed.
@@ -53,3 +53,6 @@ Implemented bcrypt login, bounded attempts, signed eight-hour httpOnly/Secure/La
 2. Commission private Octopus/Tesla accounts and capture genuinely redacted response fixtures (current fixtures are synthetic official-field examples).
 3. Verify account-specific SmartFlex active charging/cap semantics before enabling the allowance approximation.
 4. Verify configured SMTP/ntfy destinations and delivery recovery. Single-worker/single-web deployment is assumed.
+
+### Timestamp regression close-out
+Explicit supplier offsets (including +01:00 on BST and repeated autumn hours) are normalized through DateTimeOffset to UTC before REST/GraphQL domain ingestion. Added provider regression passes; final total is 45 backend plus 7 frontend tests, with one SQL container test skipped.

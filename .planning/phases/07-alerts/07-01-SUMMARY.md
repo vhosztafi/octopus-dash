@@ -4,7 +4,7 @@ plan: "01"
 subsystem: energy-dashboard
 tags: [autonomous, verified-source]
 key-files: [api, web, PROGRESS.md]
-metrics: {core_tests: 18, api_provider_tests: 26, web_tests: 7, sql_tests_skipped: 1}
+metrics: {core_tests: 18, api_provider_tests: 27, web_tests: 7, sql_tests_skipped: 1}
 ---
 
 # Alerts, notifiers and weekly email

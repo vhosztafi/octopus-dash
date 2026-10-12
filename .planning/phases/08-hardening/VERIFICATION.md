@@ -9,7 +9,7 @@ Implemented source spans all eight requested milestones. Automated and browser c
 ## Passed
 - .NET solution compiled with nullable reference types and warnings as errors.
 - Release Core suite: 18 passed (46/48/50 London slots, rates/tariff changes, partial dispatches/caps, gas, missing/open-ended/dual-register rates, live integration).
-- Release API/provider/model suite: 26 passed; one real SQL container test explicitly skipped.
+- Release API/provider/model suite: 27 passed; one real SQL container test explicitly skipped.
 - Frontend strict TypeScript check, 7 vitest tests (dates/formatting, signed/tampered/revoked sessions), production Next.js build.
 - Generated TypeScript contract from actual authenticated ASP.NET OpenAPI.
 - EF reports no model changes pending; idempotent migration SQL generated.

@@ -101,7 +101,7 @@ All eight milestones have implemented source. External verification is explicitl
 **Goal:** Secure sessions, server/action checks, internal bearer and encrypted shared key ring are implemented.
 **Mode:** mvp
 **Requirements:** SEC-01, SEC-02, SEC-03, TST-02
-**Status:** Implemented; 44 .NET tests passed, one SQL test skipped; 7 web tests and production build passed. Docker/certificate deployment and provider commissioning remain external gaps.
+**Status:** Implemented; 45 .NET tests passed, one SQL test skipped; 7 web tests and production build passed. Docker/certificate deployment and provider commissioning remain external gaps.
 **Plans:** 1
 - [x] 08-01-PLAN.md — source implemented and summary recorded
 **Success Criteria:**
