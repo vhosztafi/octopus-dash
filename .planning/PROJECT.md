@@ -28,11 +28,11 @@ Greenfield repository with an HTML prototype and implementation brief. User auth
 | Decision | Rationale | Outcome |
 |---|---|---|
 | Sequential autonomous execution | User requested no human validation stops | Accepted |
-| DB command queue | API and worker run independently; no public worker control port | Planned |
-| Explicit sample mode | Demonstrate real API shapes without inventing production prices | Planned |
+| DB command queue | API and worker run independently; no public worker control port | Implemented |
+| Explicit sample mode | Demonstrate real API shapes without inventing production prices | Implemented and browser verified |
 | Allowance opt-in and isolated | Active charging versus planned dispatch cannot be inferred reliably | Requires live verification |
 
 ## Evolution
 Update requirements, decisions, roadmap and state after each phase. Record evidence in PROGRESS.md; do not mark unrun checks passed.
 
-Last updated: 2026-10-12 after initialization.
+Last updated: 2026-10-12 after eight-milestone implementation. Automated/sample checks passed; live commissioning is pending as recorded in PROGRESS.md.
