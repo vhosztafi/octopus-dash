@@ -18,6 +18,28 @@ if ($ValidateOnly) { Write-Host 'Artifact preflight passed; server untouched.'; 
 Import-Module WebAdministration
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $sites = @(Get-Website | Where-Object { @($_.Bindings.Collection | Where-Object { $_.protocol -eq 'https' -and $_.bindingInformation.EndsWith(':' + $siteHost, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0 })
+if ($sites.Count -eq 0) {
+    $httpSites = @(Get-Website | Where-Object {
+        [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables($_.PhysicalPath)).TrimEnd('\') -eq $root -and
+        @($_.Bindings.Collection | Where-Object { $_.protocol -eq 'http' -and $_.bindingInformation.EndsWith(':' + $siteHost, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+    })
+    if ($httpSites.Count -eq 1) {
+        # Repair only the explicitly requested site's missing HTTPS binding using an existing trusted certificate.
+        $certificates = @(Get-ChildItem Cert:\LocalMachine\My | Where-Object {
+            $_.HasPrivateKey -and $_.NotBefore -lt (Get-Date) -and $_.NotAfter -gt (Get-Date).AddDays(7) -and
+            @($_.EnhancedKeyUsageList | Where-Object { $_.ObjectId -eq '1.3.6.1.5.5.7.3.1' }).Count -gt 0 -and
+            @($_.DnsNameList | Where-Object { $_.Unicode -eq $siteHost -or $_.Unicode -eq '*.vilmos.co.uk' }).Count -gt 0 -and $_.Verify()
+        } | Sort-Object NotAfter -Descending)
+        Write-Host ("Existing trusted certificates matching API hostname: {0}" -f $certificates.Count)
+        if ($certificates.Count -gt 0) {
+            New-WebBinding -Name $httpSites[0].Name -Protocol https -IPAddress '*' -Port 443 -HostHeader $siteHost -SslFlags 1
+            $binding = Get-WebBinding -Name $httpSites[0].Name -Protocol https | Where-Object { $_.bindingInformation -eq ('*:443:' + $siteHost) }
+            $binding.AddSslCertificate($certificates[0].Thumbprint, 'My')
+            Write-Host 'Configured requested HTTPS SNI binding using the existing trusted certificate.'
+            $sites = $httpSites
+        }
+    }
+}
 if ($sites.Count -ne 1) {
     $candidates = @(Get-Website | Where-Object { $_.Name -eq $siteHost -or [Environment]::ExpandEnvironmentVariables($_.PhysicalPath).TrimEnd('\') -eq $root })
     foreach ($candidate in $candidates) {
