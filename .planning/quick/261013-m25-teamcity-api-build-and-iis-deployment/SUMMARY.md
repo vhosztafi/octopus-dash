@@ -1,6 +1,6 @@
 ---
 id: 261013-m25
-status: incomplete
+status: complete
 description: TeamCity API build and IIS deployment
 ---
 
@@ -17,7 +17,7 @@ Verification:
 - A deployment diagnostics commit (4d4bcd2) triggered CI #2 (7403) automatically; it succeeded in 51 seconds. Automatic deploy #2 (7405) confirmed the correct site, physical folder and pool exist, but only the HTTP binding is present.
 - Latest CI #3 (7406), revision ee91cef, succeeded in 41 seconds and automatically triggered deploy #3 (7408). The deploy script checked for an existing trusted, valid Server Authentication certificate matching the hostname or *.vilmos.co.uk before attempting the requested HTTPS binding repair. It found zero eligible certificates and stopped before server changes.
 
-External commissioning remains incomplete. On deploy-agent-zenx (MRB2C-DEV), site/pool octopus-dash-api.vilmos.co.uk and D:\Websites\octopus-dash-api.vilmos.co.uk\www are confirmed. Its sole binding is http *:80:octopus-dash-api.vilmos.co.uk; there is no HTTPS binding and no eligible trusted matching certificate. Install/commission a trusted HTTPS certificate for that hostname on this server, then rerun api-deploy (the script can add the requested SNI binding using that existing certificate). SQL ownership and production runtime startup cannot be verified until this preflight passes. No API files, private secrets/PFX or database migrations were deployed by these failed preflights. User authorization is to log blockers for follow-up without validation stops.
+API commissioning is complete following the 2026-10-13 deployment debug fix. The HTTPS binding/certificate were subsequently configured on the confirmed site. Deploy #4 (7411) exposed a script bug: WebAdministration returned the correct named identity ApplicationPoolIdentity, but the integer cast failed. Fix 5320aa2 accepts the named or numeric provider value while rejecting other identity types. CI #5 (7413) passed, and automatic deployment #5 (7415) succeeded, generated persistent private settings/PFX without exposing values, retained a backup and verified HTTPS database health, authenticated API status and unauthenticated 401. Independent TLS-validating probes confirm health 200/status healthy and API 401 without credentials. SQL integrated security, migration/startup and runtime are now verified. Debug record: .planning/debug/resolved/teamcity-deploy.md.
 
 DNS is now complete: the user explicitly approved publishing the Cloudflare A record octopus-dash-api.vilmos.co.uk -> 77.68.99.121 (DNS only), after automatic approval review initially rejected the mutation as unapproved public exposure/IP disclosure. The record was saved and verified through resolver 1.1.1.1. The local resolver briefly retained the previous NXDOMAIN result. A direct TLS probe against that confirmed server reported a hostname mismatch, consistent with the missing SNI binding; certificate validation was never bypassed.
 

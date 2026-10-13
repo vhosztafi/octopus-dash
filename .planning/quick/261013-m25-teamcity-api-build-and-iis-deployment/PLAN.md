@@ -1,7 +1,7 @@
 ---
 id: 261013-m25
 description: TeamCity API build and IIS deployment
-status: incomplete
+status: complete
 ---
 
 Implement inline under the GSD quick workflow, as authorized for autonomous execution.
