@@ -18,7 +18,15 @@ if ($ValidateOnly) { Write-Host 'Artifact preflight passed; server untouched.'; 
 Import-Module WebAdministration
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $sites = @(Get-Website | Where-Object { @($_.Bindings.Collection | Where-Object { $_.protocol -eq 'https' -and $_.bindingInformation.EndsWith(':' + $siteHost, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0 })
-if ($sites.Count -ne 1) { throw 'Expected exactly one IIS site with the specified HTTPS host binding' }
+if ($sites.Count -ne 1) {
+    $candidates = @(Get-Website | Where-Object { $_.Name -eq $siteHost -or [Environment]::ExpandEnvironmentVariables($_.PhysicalPath).TrimEnd('\') -eq $root })
+    foreach ($candidate in $candidates) {
+        Write-Host ("Matching site candidate: {0}; path: {1}; pool: {2}" -f $candidate.Name, $candidate.PhysicalPath, $candidate.ApplicationPool)
+        foreach ($binding in $candidate.Bindings.Collection) { Write-Host ("Binding: {0} {1}" -f $binding.protocol, $binding.bindingInformation) }
+    }
+    Write-Host ("Matching site candidates: {0}; exact HTTPS sites: {1}; target directory exists: {2}" -f $candidates.Count, $sites.Count, (Test-Path -LiteralPath $root -PathType Container))
+    throw 'Expected exactly one IIS site with the specified HTTPS host binding; no server files changed'
+}
 $site = $sites[0]
 $physicalPath = [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables($site.PhysicalPath)).TrimEnd('\')
 if ($physicalPath -ne $root -or $root -ne 'D:\Websites\octopus-dash-api.vilmos.co.uk\www') { throw 'IIS physical path differs from the explicit deployment target' }
