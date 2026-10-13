@@ -19,7 +19,7 @@ public static class Registration
         {
             var certPath = config["DATA_PROTECTION_CERT"];
             if (string.IsNullOrWhiteSpace(certPath)) throw new InvalidOperationException("DATA_PROTECTION_CERT is required outside explicit sample mode.");
-            var cert = X509CertificateLoader.LoadPkcs12FromFile(certPath, config["DATA_PROTECTION_CERT_PASSWORD"]);
+            var cert = X509CertificateLoader.LoadPkcs12FromFile(certPath, config["DATA_PROTECTION_CERT_PASSWORD"], X509KeyStorageFlags.EphemeralKeySet);
             dataProtection.PersistKeysToDbContext<EnergyDbContext>().ProtectKeysWithCertificate(cert);
         }
         services.AddScoped<SecretStore>(); services.AddScoped<SettingsStore>(); services.AddScoped<IngestionService>(); services.AddScoped<PricingService>(); services.AddScoped<DashboardQueries>(); services.AddScoped<TelemetryService>(); services.AddScoped<AlertService>(); services.AddScoped<ReportService>();

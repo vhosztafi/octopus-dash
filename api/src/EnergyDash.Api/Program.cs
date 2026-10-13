@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddPrivateServerConfiguration();
 var sample = builder.Configuration.GetValue("SampleMode", false);
 var internalToken = builder.Configuration["INTERNAL_API_TOKEN"];
 if (string.IsNullOrWhiteSpace(internalToken) || internalToken.Length < 32) throw new InvalidOperationException("INTERNAL_API_TOKEN must contain at least 32 characters.");
@@ -25,6 +26,11 @@ if (sample) builder.Services.AddScoped<IDashboardData>(sp => sp.GetRequiredServi
 else builder.Services.AddScoped<IDashboardData>(sp => sp.GetRequiredService<DashboardQueries>());
 builder.Services.AddScoped<SettingsValidator>();
 var app = builder.Build();
+if (builder.Configuration.GetValue("EnforceHttps", false))
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 app.UseExceptionHandler(error => error.Run(async ctx =>
 {
     var exception = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;

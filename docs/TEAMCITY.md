@@ -1,0 +1,20 @@
+# API deployment with TeamCity
+
+Repository: https://github.com/vhosztafi/octopus-dash.git, default branch `master`.
+TeamCity imports `.teamcity/settings.kts` as portable Kotlin DSL. Keep versioned settings read-only from VCS, so production pipeline changes are reviewed in Git.
+
+`api-ci` runs backend tests and publishes a self-contained `win-x64` API ZIP, TRX results and a SHA-256/revision manifest. `api-deploy` follows successful default-branch CI builds, with snapshot and strict same-chain artifact dependencies. Deployment concurrency is one; only the existing Windows agent with `env.ZENX_ROLE=deploy` is eligible. CI watches `api/**`, `scripts/ci/**` and `.teamcity/**`.
+
+The existing IIS site must have the HTTPS host binding `octopus-dash-api.vilmos.co.uk`, physical path `D:\Websites\octopus-dash-api.vilmos.co.uk\www`, and an ApplicationPoolIdentity already granted access to SQL database `OctopusDash_Live` on `.`. The ASP.NET Core Hosting Bundle/ANCM must be installed; the package supplies its own .NET runtime. The deploy script discovers the matching pool and sets it to 64-bit/no managed CLR.
+
+Production configuration is generated once in `D:\Websites\octopus-dash-api.vilmos.co.uk\_energy-private\server-settings.json`. The IIS-generated `web.config` contains only this file path and the production environment. Administrators/SYSTEM have full access to the private directory; the existing pool has read access. Server settings contain the SQL integrated-security connection, a generated bearer token, and a generated RSA Data Protection PFX/password. The PFX encrypts the shared SQL key ring; protect and back up both database and private directory together. Deployments reuse them and refuse silent credential regeneration. SQL transport is encrypted with local-server certificate trust; the public HTTPS certificate is validated normally.
+
+Deployment validates ZIP checksums and the exact checkout revision before touching IIS. It verifies the site path/binding, stages outside www, takes the site offline and stops its pool, saves a private backup, then mirrors the artifact. HTTPS health must confirm database connectivity; `/api/status` must work with the server token and reject unauthenticated requests with 401. Failed verification restores previous application files. EF migrations run under the existing pool at startup; file rollback does not undo database migrations. Retained backups require periodic operator cleanup.
+
+To configure the Cloudflare frontend, use the server's `INTERNAL_API_TOKEN` as its secret of the same name, alongside its `APP_PASSWORD_HASH` and `SESSION_SECRET`. Never paste this file/token into build logs, Git, or a public issue. Supplier credentials must be configured separately in the production dashboard; local development credentials are not copied.
+
+Quartz runs in the separate `EnergyDash.Worker` process. Deploying this API does not install a Windows service or start sync scheduling. A follow-up worker deployment must share the SQL key ring and PFX, use an appropriately authorized Windows identity, and adapt the current Linux heartbeat path. Until then, queued sync commands will not run on this server.
+
+Local verification: run `scripts/ci/build-api.ps1` with `RUN_SQL_TESTS=1` and Docker running. Without that explicit setting, the real SQL Testcontainers test is skipped; pure/domain/provider/API tests still run. `scripts/ci/deploy-api.ps1 -ValidateOnly -ArtifactDirectory output/teamcity-api` validates the package without touching IIS.
+
+References: [Oktoberfest scripts](https://github.com/solutioniser/tr20-oktoberfest-2026/tree/master/scripts/ci), [TeamCity same-chain artifacts](https://www.jetbrains.com/help/teamcity/artifact-dependencies.html), [ASP.NET Core IIS hosting](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/?view=aspnetcore-10.0).
