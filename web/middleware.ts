@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sessionCookie, validSession } from './lib/session';
 
-export async function proxy(request: NextRequest) {
+// Use the adapter's supported edge middleware path. Server Actions and BFF
+// routes independently enforce the same session checks.
+export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === '/login') return NextResponse.next();
   if (!await validSession(request.cookies.get(sessionCookie)?.value)) return NextResponse.redirect(new URL('/login', request.url));
   return NextResponse.next();

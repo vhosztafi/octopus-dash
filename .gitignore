@@ -12,3 +12,8 @@ output/
 .playwright-cli/
 **/.local/
 secrets/
+**/.open-next/
+**/.wrangler/
+**/.dev.vars
+**/.dev.vars.*
+!**/.dev.vars.example

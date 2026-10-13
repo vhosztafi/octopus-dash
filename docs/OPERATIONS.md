@@ -1,7 +1,7 @@
 # Operations and commissioning
 
 ## Security
-The browser talks only to Next.js. Every server fetch/Server Action verifies a signed session; proxy.ts also protects all routes except login/static framework assets. Cookies are httpOnly, Secure, SameSite=Lax, eight-hour expiry. Changing APP_PASSWORD_HASH revokes sessions. Login throttling is global to the single web process (10 attempts/15 minutes). Successful login resets it. Logout action deletes the cookie.
+The browser talks only to Next.js. Every server fetch/Server Action verifies a signed session; middleware.ts also protects all routes except login/static framework assets. Cookies are httpOnly, Secure, SameSite=Lax, eight-hour expiry. Changing APP_PASSWORD_HASH revokes sessions. Docker login throttling is global to the single web process (10 attempts/15 minutes), reset after a successful login. The Cloudflare deployment uses a shared Worker rate-limit binding (10 attempts/minute per Cloudflare location) and denies login if that binding is unavailable. Logout action deletes the cookie. See [Cloudflare deployment](CLOUDFLARE.md) for production build and runtime secret configuration.
 
 The API uses a constant-time comparison of SHA-256 hashes of the full internal bearer header, requires a 32-character token on startup, and protects OpenAPI too. Only its minimal private /health endpoint is unauthenticated. Compose publishes no API or SQL port. Use HTTPS for the web app; local HTTP on localhost is only for development. CSP prohibits remote connections and embedding; Next's inline runtime requires unsafe-inline. Passwords and secrets never appear in API errors or connection responses. HTTP header logging is disabled; redaction protects destructured token/password properties.
 

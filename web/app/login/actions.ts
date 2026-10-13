@@ -3,22 +3,15 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { sessionCookie, signSession } from "@/lib/session";
-// Single-user/single-web-process deployment. Bound attempts globally, avoiding proxy header spoofing.
-const attempts: { at: number; count: number } = { at: 0, count: 0 };
+import { allowLoginAttempt, resetLocalLoginAttempts } from "@/lib/login-rate-limit";
 export async function login(_: string, form: FormData): Promise<string> {
-  const now = Date.now();
-  if (now - attempts.at > 15 * 60 * 1000) {
-    attempts.at = now;
-    attempts.count = 0;
-  }
-  if (attempts.count >= 10)
-    return "Too many attempts. Try again in 15 minutes.";
-  attempts.count++;
+  if (!(await allowLoginAttempt()))
+    return "Too many attempts. Wait a few minutes and try again.";
   const hash = process.env.APP_PASSWORD_HASH;
   const password = String(form.get("password") ?? "");
   if (!hash || password.length > 256 || !(await bcrypt.compare(password, hash)))
     return "Incorrect password.";
-  attempts.count = 0;
+  resetLocalLoginAttempts();
   (await cookies()).set(sessionCookie, await signSession(), {
     httpOnly: true,
     secure: true,

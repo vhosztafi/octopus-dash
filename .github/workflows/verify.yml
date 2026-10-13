@@ -18,5 +18,5 @@ jobs:
         with: {node-version: '24', cache: npm, cache-dependency-path: web/package-lock.json}
       - run: npm ci
         working-directory: web
-      - run: npm run typecheck && npm test && npm run build
+      - run: npm run ci:cloudflare
         working-directory: web

@@ -2,6 +2,8 @@
 
 A self-hosted Octopus Energy + Tesla Powerwall dashboard. Next.js is the authenticated backend-for-frontend; ASP.NET Core and a Quartz worker share a SQL Server database. Day, half-hour ledger, weekly report and settings follow the supplied prototype.
 
+For Cloudflare-hosted frontend builds and Worker deployment, see [Cloudflare setup](docs/CLOUDFLARE.md). The backend remains a separate deployment.
+
 ## Run locally with sample data
 
 Requires .NET 10 and Node 24. Prices in sample mode come only from the supplied prototype; credentials cannot be saved and notifications cannot be sent in this mode.
