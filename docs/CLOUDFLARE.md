@@ -13,6 +13,7 @@ The frontend deploys to https://octopus-dash.vilmos.co.uk using Cloudflare Worke
 | Deploy command | `npm run deploy:worker` |
 | Preview command (if enabled later) | `npm run upload:worker` |
 | Node version | `24` (build variable `NODE_VERSION`) |
+| Include watch paths | `web/*` |
 
 Cloudflare installs dependencies from `web/package-lock.json`, runs strict TypeScript and Vitest checks, builds Next.js through the pinned OpenNext adapter, then deploys the existing output. Failed checks prevent deployment. GitHub Actions retains independent backend/frontend checks; Cloudflare performs the production build and deployment itself.
 
@@ -32,7 +33,7 @@ Configure these as **Secret** values in Worker Settings → Variables & Secrets.
 
 Do not upload Octopus or Tesla credentials, SQL credentials, or the Data Protection certificate to the frontend Worker. Those stay with the API/worker deployment. Do not commit `.env`, `.dev.vars` or generated Worker output. The initial deployment denies login until the production login secrets are configured. After login is configured, unavailable backend data is shown through the existing error screen until the API is commissioned.
 
-For local Worker tests, create an ignored `web/.dev.vars` with synthetic credentials. Run `npm run build:worker`, then `npm run preview:worker`. Ordinary `npm run dev`, `npm run build` and Docker remain supported. Edge middleware is used because the adapter's Node middleware path is experimental; Server Actions and BFF routes independently enforce sessions.
+For local Worker tests, copy `web/.dev.vars.example` to the ignored `web/.dev.vars` and populate it with synthetic credentials. Run `npm run build:worker`, then `npm run preview:worker`. Ordinary `npm run dev`, `npm run build` and Docker remain supported. Edge middleware is used because the adapter's Node middleware path is experimental; Server Actions and BFF routes independently enforce sessions.
 
 The Cloudflare login binding limits attempts across isolates within each Cloudflare location. Local Docker keeps its ten-attempt/fifteen-minute process limit. Cloudflare limit failures deny login.
 

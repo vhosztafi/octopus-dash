@@ -15,7 +15,10 @@ Latest activity: 2026-10-12 implementation and verification close-out on codex/h
 | ID | Task | Date | Result |
 |---|---|---|---|
 | 261012-el1 | Enable live local credential testing | 2026-10-12 | Four healthy Docker services; encrypted storage verified; Settings ready for owner credentials |
+| 261013-ew7 | Cloudflare Worker deployment and hosted builds | 2026-10-13 | Cloudflare Builds connected to master/web; initial hosted build Ready; HTTPS login endpoint verified |
 
 Current deployment: live Compose mode at localhost:3000, replacing the earlier sample preview. Docker/SQL/certificate blockers are resolved. Full backend suite now passes 46 tests with no skips. Private local login is in ignored secrets/local-access.txt. Provider credentials and live supplier verification remain pending.
 
 Latest activity: 2026-10-13 GSD debug Octopus sync repair. Live Octopus account verification succeeded; account discovery, dated tariffs and both-fuel consumption now sync. Full backend suite passes 52 tests with no skips; seven frontend tests/typecheck and all Docker builds pass. Latest complete meter/tariff day is 2026-10-11. SmartFlex device ID, historical discounts and four-rate EV/cap semantics remain logged follow-ups; dashboard displays partial pricing while dispatches are unavailable. Tesla/notifications remain uncommissioned. Debug record: debug/resolved/octopus-sync.md.
+
+Latest deployment activity: Cloudflare Worker octopus-dash at https://octopus-dash.vilmos.co.uk, built by Cloudflare Builds from master with root web and frontend-only watch paths. Nine frontend tests, typecheck, Linux OpenNext build, workerd auth/error-boundary smoke and dry-run passed. Initial hosted build Ready; live HTTPS redirect/login verified. Production login/runtime secrets and API deployment at https://octopus-dash-api.vilmos.co.uk remain follow-ups. Existing local live Compose deployment remains intact. Details: quick/261013-ew7-cloudflare-worker-deployment-and-cloudfl/SUMMARY.md and docs/CLOUDFLARE.md.

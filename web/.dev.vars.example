@@ -1,0 +1,5 @@
+# Local Worker preview only. Copy to .dev.vars and use synthetic test credentials.
+# Production values belong in Cloudflare Worker Settings > Variables & Secrets.
+APP_PASSWORD_HASH=""
+SESSION_SECRET=""
+INTERNAL_API_TOKEN=""
