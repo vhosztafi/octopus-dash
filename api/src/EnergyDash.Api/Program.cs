@@ -19,6 +19,7 @@ builder.Services.AddProblemDetails(); builder.Services.AddOpenApi(o => o.AddSche
     if (context.JsonTypeInfo.Type == typeof(DashboardSettings) && schema.Properties is not null) schema.Required = schema.Properties.Keys.ToHashSet();
     return Task.CompletedTask;
 }));
+builder.Services.AddHttpsRedirection(o => o.HttpsPort = builder.Configuration.GetValue<int?>("HttpsRedirection:HttpsPort"));
 builder.Services.ConfigureHttpJsonOptions(o => { o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()); o.SerializerOptions.NumberHandling = JsonNumberHandling.Strict; });
 builder.Services.AddEnergyInfrastructure(builder.Configuration, sample);
 builder.Services.AddSingleton<SampleDashboard>();
