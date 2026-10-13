@@ -54,7 +54,7 @@ $physicalPath = [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables
 if ($physicalPath -ne $root -or $root -ne 'D:\Websites\octopus-dash-api.vilmos.co.uk\www') { throw 'IIS physical path differs from the explicit deployment target' }
 $pool = [string]$site.ApplicationPool
 $poolItem = Get-Item -LiteralPath "IIS:\AppPools\$pool"
-if ([int]$poolItem.processModel.identityType -ne 4) { throw 'Integrated SQL deployment requires the existing ApplicationPoolIdentity' }
+if ([string]$poolItem.processModel.identityType -notin @('ApplicationPoolIdentity', '4')) { throw 'Integrated SQL deployment requires the existing ApplicationPoolIdentity' }
 if (-not (Test-Path -LiteralPath $root -PathType Container)) { throw 'Expected existing IIS web directory' }
 New-Item -ItemType Directory -Force -Path $privateRoot | Out-Null
 # Secrets are never artifacts or web content. Restrict inheritance before generating them.
