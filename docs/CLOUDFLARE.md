@@ -1,6 +1,6 @@
 # Next.js on Cloudflare Workers
 
-The frontend deploys to https://octopus-dash.vilmos.co.uk using Cloudflare Workers Builds connected to https://github.com/vhosztafi/octopus-dash. The backend remains a separate deployment, with its future origin configured as https://octopus-dash-api.vilmos.co.uk. Browsers continue to use only the frontend BFF.
+The frontend deploys to https://octopus-dash.vilmos.co.uk using Cloudflare Workers Builds connected to https://github.com/vhosztafi/octopus-dash. The backend is deployed separately through TeamCity to IIS at https://octopus-dash-api.vilmos.co.uk. Browsers continue to use only the frontend BFF.
 
 ## Build configuration
 
@@ -29,9 +29,11 @@ Configure these as **Secret** values in Worker Settings → Variables & Secrets.
 
 - `APP_PASSWORD_HASH`: bcrypt hash for the production dashboard login.
 - `SESSION_SECRET`: stable random string of at least 32 characters, used to sign eight-hour sessions.
-- `INTERNAL_API_TOKEN`: random bearer token of at least 32 characters, also configured on the future ASP.NET API.
+- `INTERNAL_API_TOKEN`: the production bearer token already configured on the ASP.NET API. The localhost API token is different and must not be substituted.
 
 Do not upload Octopus or Tesla credentials, SQL credentials, or the Data Protection certificate to the frontend Worker. Those stay with the API/worker deployment. Do not commit `.env`, `.dev.vars` or generated Worker output. The initial deployment denies login until the production login secrets are configured. After login is configured, unavailable backend data is shown through the existing error screen until the API is commissioned.
+
+On 2026-10-13, the owner selected the existing localhost password for production. Its bcrypt hash was uploaded as `APP_PASSWORD_HASH` with a separate random production `SESSION_SECRET` using Wrangler's stdin secret upload. Production browser sign-in succeeded. The production API token transfer is pending explicit approval; until connected, an authenticated session reaches the unavailable-data screen. The password and secret values are never committed or written to build logs.
 
 For local Worker tests, copy `web/.dev.vars.example` to the ignored `web/.dev.vars` and populate it with synthetic credentials. Run `npm run build:worker`, then `npm run preview:worker`. Ordinary `npm run dev`, `npm run build` and Docker remain supported. Edge middleware is used because the adapter's Node middleware path is experimental; Server Actions and BFF routes independently enforce sessions.
 
