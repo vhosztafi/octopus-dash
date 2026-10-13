@@ -13,7 +13,9 @@ describe("signed sessions", () => {
     const token = await signSession();
     expect(await validSession(token)).toBe(true);
     const parts = token.split(".");
-    parts[2] = "x" + parts[2].slice(1);
+    const signature = Buffer.from(parts[2], "base64url");
+    signature[0] ^= 1;
+    parts[2] = signature.toString("base64url");
     expect(await validSession(parts.join("."))).toBe(false);
   });
   it("rejects missing sessions and revokes them when the password changes", async () => {
