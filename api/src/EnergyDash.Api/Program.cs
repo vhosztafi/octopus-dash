@@ -70,12 +70,14 @@ api.MapGet("/connections", async (SecretStore secrets, IDashboardData data, Canc
     var octopus = await secrets.HintAsync("Octopus__ApiKey", ct); var tesla = await secrets.HintAsync("Tesla__RefreshToken", ct); var status = await data.StatusAsync(ct);
     return new ConnectionsDto(new("octopus", octopus is not null, octopus, await secrets.GetAsync("Octopus__AccountNumber", ct), octopus is null ? "Not connected" : status.OctopusHealth), new("tesla", tesla is not null, tesla, null, tesla is null ? "Not connected" : status.TeslaHealth));
 }).Produces<ConnectionsDto>();
-api.MapPut("/connections/octopus", async (OctopusCredentials value, SecretStore secrets, CancellationToken ct) =>
+api.MapPut("/connections/octopus", async (OctopusCredentials value, SecretStore secrets, EnergyDbContext db, CancellationToken ct) =>
 {
     if (sample) return Results.Problem(statusCode: 409, title: "Disable sample mode to save credentials");
     if (string.IsNullOrWhiteSpace(value.ApiKey) || value.ApiKey.Length > 500 || !System.Text.RegularExpressions.Regex.IsMatch(value.AccountNumber, "^A-[A-Za-z0-9]+$")) return Results.ValidationProblem(new Dictionary<string, string[]> { ["credentials"] = ["Provide a valid API key and A- account number."] });
     await secrets.PutAsync("Octopus__ApiKey", value.ApiKey, ct); await secrets.PutAsync("Octopus__AccountNumber", value.AccountNumber, ct);
-    return Results.Ok(new ConnectionTestDto(true, "Credentials saved encrypted. Test connection to verify."));
+    await secrets.PutAsync("Octopus__TokenExpires", DateTime.MinValue.ToString("O"), ct);
+    db.Add(new SyncCommand { CreatedUtc = DateTime.UtcNow }); await db.SaveChangesAsync(ct);
+    return Results.Ok(new ConnectionTestDto(true, "Credentials saved encrypted. Account discovery and initial sync queued."));
 }).Produces<ConnectionTestDto>().ProducesValidationProblem();
 api.MapPut("/connections/tesla", async (TeslaCredentials value, SecretStore secrets, CancellationToken ct) =>
 {

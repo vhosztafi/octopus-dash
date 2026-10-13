@@ -8,6 +8,39 @@ namespace EnergyDash.Integration.Tests;
 
 public sealed class OctopusClientTests
 {
+    private sealed class FourRateHandler : HttpMessageHandler
+    {
+        public List<string> Paths { get; } = [];
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var path = request.RequestUri!.AbsolutePath; Paths.Add(path);
+            var body = path.EndsWith("/standard-unit-rates/", StringComparison.Ordinal) ? "{\"count\":0,\"next\":null,\"results\":[]}"
+                : path.EndsWith("/IOG-SMB-FIX-12M-26-03-23/", StringComparison.Ordinal) ? """
+                {"code":"IOG-SMB-FIX-12M-26-03-23","four_rate_ev_electricity_tariffs":{"_J":{"direct_debit_monthly":{"code":"E-1R-IOG-SMB-FIX-12M-26-03-23-J","links":[{"rel":"day_unit_rates"},{"rel":"night_unit_rates"},{"rel":"ev_device_peak_unit_rates"},{"rel":"ev_device_off_peak_unit_rates"}]}}}}
+                """
+                : "{\"count\":1,\"next\":null,\"results\":[{\"value_inc_vat\":" + (path.Contains("/night-unit-rates/", StringComparison.Ordinal) ? "8" : "34") + ",\"valid_from\":\"2026-07-05T23:00:00Z\",\"valid_to\":null}]}";
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") });
+        }
+    }
+    [Fact]
+    public async Task FourRateSingleRegisterCodeUsesPublishedDayNightRelations()
+    {
+        using var db = new DesignTimeFactory().CreateDbContext([]);
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Octopus:ApiKey"] = "fixture-only-key" }).Build();
+        using var handler = new FourRateHandler(); using var http = new HttpClient(handler) { BaseAddress = new Uri("https://api.octopus.energy/v1/") };
+        var client = new OctopusRestClient(http, new SecretStore(db, new EphemeralDataProtectionProvider(), config));
+        var rows = await client.UnitRatesAsync(new() { Fuel = EnergyDash.Core.Fuel.Elec, TariffCode = "E-1R-IOG-SMB-FIX-12M-26-03-23-J", ProductCode = "IOG-SMB-FIX-12M-26-03-23" }, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow, default);
+        Assert.Equal(2, rows.Count); Assert.Equal(34m, rows.Single(r => r.Register == EnergyDash.Core.RateRegister.Day).Rate.ValueIncVat); Assert.Equal(8m, rows.Single(r => r.Register == EnergyDash.Core.RateRegister.Night).Rate.ValueIncVat);
+        Assert.DoesNotContain(handler.Paths, p => p.Contains("/ev-device-", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("E-FLAT2R-SILVER-24-12-31-J", "SILVER-24-12-31")]
+    [InlineData("E-2R-VAR-22-11-01-J", "VAR-22-11-01")]
+    [InlineData("E-1R-IOG-SMB-FIX-12M-26-03-23-J", "IOG-SMB-FIX-12M-26-03-23")]
+    [InlineData("G-1R-SILVER-25-09-02-J", "SILVER-25-09-02")]
+    public void ProductCodesIncludeFlatDualRegisterAgreements(string tariff, string product) => Assert.Equal(product, OctopusRestClient.ProductCode(tariff));
+
     private sealed class FixtureHandler : HttpMessageHandler
     {
         public List<string> Paths { get; } = [];

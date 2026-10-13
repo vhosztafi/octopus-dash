@@ -67,7 +67,9 @@ export default async function DayPage({
         <div style={{ padding: "0 12px", textAlign: "center" }}>
           <div style={{ fontWeight: 600 }}>{dayLabel(date)}</div>
           <div className="muted" style={{ fontSize: 12 }}>
-            {date === latest.date
+            {!day.complete
+              ? "Partial data"
+              : date === latest.date
               ? date === shiftDate(londonToday(), -1)
                 ? "Yesterday · latest complete day"
                 : "Latest complete day"
@@ -112,7 +114,9 @@ export default async function DayPage({
             <span className={`dot ${day.complete ? "" : "off"}`} />
             {day.complete
               ? "Rates matched per half-hour incl. dispatches"
-              : `${day.missingSlots} missing readings · ${day.unpricedSlots} unpriced slots`}
+              : day.missingSlots === 0 && day.unpricedSlots === 0
+                ? "Tariff rates matched · pricing checks pending"
+                : `${day.missingSlots} missing readings · ${day.unpricedSlots} unpriced slots`}
           </span>
           {day.sample ? <span className="pill">Sample figures</span> : null}
         </div>

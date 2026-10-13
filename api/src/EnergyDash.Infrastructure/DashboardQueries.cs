@@ -37,6 +37,15 @@ public sealed class DashboardQueries(EnergyDbContext db, SettingsStore settings)
         var missing = rows.Count(s => s.Kwh is null) + (days.FirstOrDefault(d => d.Fuel == Fuel.Gas)?.MissingSlots ?? rows.Count);
         var unpriced = rows.Count(s => s.RatePence is null) + (days.FirstOrDefault(d => d.Fuel == Fuel.Gas)?.UnpricedSlots ?? rows.Count);
         var complete = missing == 0 && unpriced == 0 && es is not null && gs is not null;
+        if (config.PriceDispatchAtOffPeak && elec.Values.Any(s => s.TariffCode.Contains("INTELLI-", StringComparison.Ordinal) || s.TariffCode.Contains("IOG-", StringComparison.Ordinal)))
+        {
+            var dispatch = await db.Set<SyncLog>().AsNoTracking().Where(l => l.Source == "Dispatch").OrderByDescending(l => l.StartedUtc).ThenByDescending(l => l.Id).FirstOrDefaultAsync(ct);
+            if (dispatch is null || !dispatch.Ok || dispatch.FinishedUtc is null)
+            {
+                complete = false;
+                warnings.Add("Smart-charge dispatches have not synced. Costs use tariff rates; extra discounted charging slots may be missing. Check the SmartFlex device ID in Settings.");
+            }
+        }
         return new(date, false, complete, missing, unpriced, kpis, rows, costs, live with { ChargedKwh = battery.Where(b => elec.TryGetValue(b.IntervalStartUtc, out var priced) && priced.Band is RateBand.Off or RateBand.Disp).Sum(b => b.BattChargeKwh), DischargedKwh = rows.Where(s => s.Band == "peak" && s.BatteryKwh < 0).Sum(s => -s.BatteryKwh!.Value), SavingPence = saving }, alerts, warnings, config);
     }
     public static SlotDto ToSlot(DateTime time, PricedSlot? slot, BatteryInterval? battery, DashboardSettings config)
@@ -60,10 +69,13 @@ public sealed class DashboardQueries(EnergyDbContext db, SettingsStore settings)
     }
     public async Task<StatusDto> StatusAsync(CancellationToken ct)
     {
-        var logs = await db.Set<SyncLog>().AsNoTracking().OrderByDescending(s => s.StartedUtc).Take(100).ToListAsync(ct);
-        string Health(string source) { var last = logs.FirstOrDefault(l => l.Source == source); return last is null ? "Not connected" : last.Ok ? "Connected" : "Sync failed"; }
+        string[] sources = ["OctopusAccount", "OctopusRates", "OctopusConsumption", "TeslaLive", "Pricing", "Reprice", "Dispatch"];
+        var logs = await db.Set<SyncLog>().AsNoTracking().Where(s => sources.Contains(s.Source)).GroupBy(s => s.Source).Select(g => g.OrderByDescending(s => s.StartedUtc).ThenByDescending(s => s.Id).First()).ToListAsync(ct);
+        string Health(string source) { var last = logs.FirstOrDefault(l => l.Source == source); return last is null ? "Not connected" : last.FinishedUtc is null ? "Syncing" : last.Ok ? "Connected" : "Sync failed"; }
+        var octopusHealth = new[] { "OctopusAccount", "OctopusRates", "OctopusConsumption" }.Select(Health).ToArray();
+        var pricingLog = logs.Where(l => l.Source is "Pricing" or "Reprice" or "OctopusRates" or "OctopusConsumption" or "Dispatch" && l.Ok).OrderByDescending(l => l.FinishedUtc).FirstOrDefault();
         var consumption = await db.Set<Consumption>().MaxAsync(c => (DateTime?)c.IntervalEndUtc, ct); var pricing = await db.Set<PricedDay>().MaxAsync(d => (DateTime?)d.PricedUtc, ct);
-        return new(false, consumption?.ToString("O"), logs.FirstOrDefault(l => l.Source == "TeslaLive" && l.Ok)?.FinishedUtc?.ToString("O"), pricing?.ToString("O"), Health("OctopusConsumption"), Health("TeslaLive"), Health("Pricing"));
+        return new(false, consumption?.ToString("O"), logs.FirstOrDefault(l => l.Source == "TeslaLive" && l.Ok)?.FinishedUtc?.ToString("O"), pricing?.ToString("O"), octopusHealth.Contains("Syncing") ? "Syncing" : octopusHealth.Contains("Sync failed") ? "Sync failed" : octopusHealth.All(h => h == "Connected") ? "Connected" : "Not connected", Health("TeslaLive"), pricingLog is null ? "Not connected" : "Connected");
     }
     public async Task<LatestDayDto> LatestAsync(CancellationToken ct)
     {

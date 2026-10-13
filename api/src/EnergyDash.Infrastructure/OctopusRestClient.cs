@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using EnergyDash.Core;
@@ -21,7 +22,7 @@ public sealed class OctopusRestClient(HttpClient http, SecretStore secrets)
 {
     public static string ProductCode(string tariff)
     {
-        var match = Regex.Match(tariff, "^(?:E-[12]R|G-1R)-(.+)-[A-P]$", RegexOptions.CultureInvariant);
+        var match = Regex.Match(tariff, "^(?:E-(?:[12]R|FLAT2R)|G-1R)-(.+)-[A-P]$", RegexOptions.CultureInvariant);
         if (!match.Success) throw new InvalidOperationException("Unrecognized tariff code; inspect the Octopus product catalogue.");
         return match.Groups[1].Value;
     }
@@ -63,11 +64,36 @@ public sealed class OctopusRestClient(HttpClient http, SecretStore secrets)
             var day = await RatesAsync(agreement, "day-unit-rates", start, end, ct); var night = await RatesAsync(agreement, "night-unit-rates", start, end, ct);
             return day.Select(r => (RateRegister.Day, r)).Concat(night.Select(r => (RateRegister.Night, r))).ToList();
         }
-        try { return (await RatesAsync(agreement, "standard-unit-rates", start, end, ct)).Select(r => (RateRegister.Standard, r)).ToList(); }
-        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound && agreement.TariffCode.StartsWith("E-2R-", StringComparison.Ordinal))
+        IReadOnlyList<OctopusRate> standard;
+        try { standard = await RatesAsync(agreement, "standard-unit-rates", start, end, ct); }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound) { standard = []; }
+        if (standard.Count > 0) return standard.Select(r => (RateRegister.Standard, r)).ToList();
+        // New four-rate EV products still use E-1R codes, but publish day/night links.
+        // Follow catalogue relations rather than inferring register structure from that code.
+        using var response = await GetAsync($"products/{Uri.EscapeDataString(agreement.ProductCode)}/", ct);
+        response.EnsureSuccessStatusCode();
+        var product = await response.Content.ReadFromJsonAsync<JsonElement>(ct);
+        var relations = TariffRelations(product, agreement.TariffCode);
+        if (relations.Contains("day_unit_rates") && relations.Contains("night_unit_rates"))
         {
             var day = await RatesAsync(agreement, "day-unit-rates", start, end, ct); var night = await RatesAsync(agreement, "night-unit-rates", start, end, ct);
             return day.Select(r => (RateRegister.Day, r)).Concat(night.Select(r => (RateRegister.Night, r))).ToList();
         }
+        return [];
+    }
+    private static HashSet<string> TariffRelations(JsonElement element, string code)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+        {
+            if (element.TryGetProperty("code", out var tariff) && tariff.GetString() == code && element.TryGetProperty("links", out var links))
+                return links.EnumerateArray().Select(l => l.GetProperty("rel").GetString()!).ToHashSet(StringComparer.Ordinal);
+            foreach (var property in element.EnumerateObject())
+            {
+                var found = TariffRelations(property.Value, code); if (found.Count > 0) return found;
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Array)
+            foreach (var item in element.EnumerateArray()) { var found = TariffRelations(item, code); if (found.Count > 0) return found; }
+        return [];
     }
 }

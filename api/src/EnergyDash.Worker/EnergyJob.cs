@@ -18,7 +18,7 @@ public sealed class EnergyJob(EnergyDbContext db, IngestionService ingest, Prici
     {
         var log = new SyncLog { Source = source, StartedUtc = DateTime.UtcNow }; db.Add(log); await db.SaveChangesAsync(ct);
         try { await action(); log.Ok = true; log.Detail = "Completed"; }
-        catch (Exception ex) when (ex is not OperationCanceledException) { log.Detail = "Failed: " + ex.GetType().Name; throw; }
+        catch (Exception ex) when (ex is not OperationCanceledException) { db.ChangeTracker.Clear(); log.Detail = "Failed: " + ex.GetType().Name; throw; }
         finally
         {
             // Pricing/token refresh clears the tracker. Reattach only this log.
