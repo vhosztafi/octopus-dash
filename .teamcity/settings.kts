@@ -6,6 +6,8 @@ import jetbrains.buildServer.configs.kotlin.triggers.finishBuildTrigger
 version = "2026.2"
 
 project {
+    // The root project's dynamic branch parameter is undefined in TeamCity's DSL compiler job.
+    params { param("env.branch_name", "master") }
     buildType(ApiCi)
     buildType(ApiDeploy)
 }
