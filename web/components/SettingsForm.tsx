@@ -2,6 +2,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { Header, Notice } from "./Header";
+import { TeslaAuthorizationForm } from "./TeslaAuthorizationForm";
 import {
   saveSettings,
   saveConnection,
@@ -328,7 +329,11 @@ export function SettingsForm({
                   {c.tesla.status}
                 </span>
               </div>
-              <ConnectionForm provider="tesla" hint={c.tesla.hint} />
+              <TeslaAuthorizationForm />
+              <details>
+                <summary>Already have a Tesla refresh token?</summary>
+                <ConnectionForm provider="tesla" hint={c.tesla.hint} />
+              </details>
               {f("teslaSiteId", "Energy site", "text", undefined, [
                 ["", "Available after connecting"],
                 ...sites.map(

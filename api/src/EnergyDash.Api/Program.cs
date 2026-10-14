@@ -96,6 +96,17 @@ api.MapPut("/connections/tesla", async (TeslaCredentials value, SecretStore secr
     await secrets.PutAsync("Tesla__Expires", DateTime.MinValue.ToString("O"), ct);
     return Results.Ok(new ConnectionTestDto(true, "OAuth credentials saved encrypted."));
 }).Produces<ConnectionTestDto>().ProducesValidationProblem();
+api.MapPost("/connections/tesla/authorize", async (TeslaAppCredentials value, TeslaAuthorization authorization, CancellationToken ct) =>
+{
+    if (sample) return Results.Problem(statusCode: 409, title: "Sample mode has no live supplier connection");
+    return Results.Ok(await authorization.BeginAsync(value, ct));
+}).Produces<TeslaAuthorizationStart>();
+api.MapPost("/connections/tesla/callback", async (TeslaAuthorizationCallback value, TeslaAuthorization authorization, CancellationToken ct) =>
+{
+    if (sample) return Results.Problem(statusCode: 409, title: "Sample mode has no live supplier connection");
+    await authorization.CompleteAsync(value, ct);
+    return Results.Ok(new ConnectionTestDto(true, "Tesla authorization completed."));
+}).Produces<ConnectionTestDto>();
 api.MapPost("/connections/octopus/test", async (OctopusRestClient client, CancellationToken ct) => { if (sample) return Results.Problem(statusCode: 409, title: "Sample mode has no live supplier connection"); await client.AccountAsync(ct); return Results.Ok(new ConnectionTestDto(true, "Octopus account verified.")); }).Produces<ConnectionTestDto>();
 api.MapPost("/connections/tesla/test", async (IBatteryProvider client, CancellationToken ct) => { if (sample) return Results.Problem(statusCode: 409, title: "Sample mode has no live supplier connection"); var sites = await client.SitesAsync(ct); return Results.Ok(new ConnectionTestDto(true, $"Tesla connected · {sites.Count} energy sites.")); }).Produces<ConnectionTestDto>();
 api.MapGet("/tesla/sites", async (IBatteryProvider client, CancellationToken ct) => sample ? Array.Empty<EnergySiteDto>() : (await client.SitesAsync(ct)).Select(s => new EnergySiteDto(s.EnergySiteId?.ToString() ?? "", s.SiteName ?? "Powerwall")).ToArray()).Produces<IReadOnlyList<EnergySiteDto>>();

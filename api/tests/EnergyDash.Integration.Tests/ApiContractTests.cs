@@ -72,4 +72,13 @@ public sealed class ApiContractTests : IClassFixture<ApiFactory>
     [InlineData("/api/reports/weekly/send?week=2026-10-05")]
     public async Task SampleModeCannotContactProvidersOrSendReports(string path) { using var client = factory.AuthorizedClient(); Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync(path, null)).StatusCode); }
     [Fact] public async Task OpenApiContainsEveryReadContract() { using var client = factory.AuthorizedClient(); var document = await client.GetFromJsonAsync<JsonElement>("/openapi/v1.json"); Assert.True(document.GetProperty("components").GetProperty("schemas").TryGetProperty("DayDto", out _)); Assert.True(document.GetProperty("paths").TryGetProperty("/api/tesla/sites", out _)); }
+    [Fact]
+    public async Task TeslaOAuthRequiresInternalAuthAndRejectsSampleMode()
+    {
+        using var authorized = factory.AuthorizedClient(); using var anonymous = factory.CreateClient();
+        var credentials = new TeslaAppCredentials("synthetic-app", "synthetic-secret");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/connections/tesla/authorize", credentials)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await authorized.PostAsJsonAsync("/api/connections/tesla/authorize", credentials)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await authorized.PostAsJsonAsync("/api/connections/tesla/callback", new TeslaAuthorizationCallback(new string('a', 64), "synthetic-code"))).StatusCode);
+    }
 }

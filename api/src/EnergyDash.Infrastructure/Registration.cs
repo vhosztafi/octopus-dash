@@ -26,6 +26,7 @@ public static class Registration
         services.AddHttpClient<OctopusRestClient>(c => c.BaseAddress = new Uri("https://api.octopus.energy/v1/")).AddStandardResilienceHandler();
         services.AddHttpClient<OctopusGraphClient>(c => c.BaseAddress = new Uri("https://api.octopus.energy/v1/graphql/")).AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
         services.AddHttpClient<TeslaFleetClient>().AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
+        services.AddHttpClient<TeslaAuthorization>().AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
         services.AddHttpClient<NtfyNotifier>().AddStandardResilienceHandler(o => o.Retry.DisableForUnsafeHttpMethods());
         services.AddScoped<IBatteryProvider>(sp => sp.GetRequiredService<TeslaFleetClient>());
         services.AddScoped<INotifier, EmailNotifier>(); services.AddScoped<INotifier>(sp => sp.GetRequiredService<NtfyNotifier>());

@@ -355,6 +355,64 @@
         }
       }
     },
+    "/api/connections/tesla/authorize": {
+      "post": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeslaAppCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeslaAuthorizationStart"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/connections/tesla/callback": {
+      "post": {
+        "tags": [
+          "EnergyDash.Api"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeslaAuthorizationCallback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionTestDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/connections/octopus/test": {
       "post": {
         "tags": [
@@ -1228,6 +1286,51 @@
             "type": "string"
           },
           "pricingHealth": {
+            "type": "string"
+          }
+        }
+      },
+      "TeslaAppCredentials": {
+        "required": [
+          "clientId",
+          "clientSecret"
+        ],
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "clientSecret": {
+            "type": "string"
+          }
+        }
+      },
+      "TeslaAuthorizationCallback": {
+        "required": [
+          "state",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "TeslaAuthorizationStart": {
+        "required": [
+          "state",
+          "authorizationUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "authorizationUrl": {
             "type": "string"
           }
         }

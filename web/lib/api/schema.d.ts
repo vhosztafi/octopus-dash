@@ -485,6 +485,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/connections/tesla/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TeslaAppCredentials"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TeslaAuthorizationStart"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/connections/tesla/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TeslaAuthorizationCallback"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConnectionTestDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/connections/octopus/test": {
         parameters: {
             query?: never;
@@ -878,6 +956,18 @@ export interface components {
             octopusHealth: string;
             teslaHealth: string;
             pricingHealth: string;
+        };
+        TeslaAppCredentials: {
+            clientId: string;
+            clientSecret: string;
+        };
+        TeslaAuthorizationCallback: {
+            state: string;
+            code: string;
+        };
+        TeslaAuthorizationStart: {
+            state: string;
+            authorizationUrl: string;
         };
         TeslaCredentials: {
             refreshToken: string;

@@ -47,7 +47,7 @@ try {
     try { await request(base + "/login"); ready = true; break; } catch { await new Promise(resolve => setTimeout(resolve, 500)); }
   }
   if (!ready) throw new Error("Worker preview did not start within 60 seconds.");
-  for (const route of ["/", "/settings", "/weekly", "/half-hours", "/api/export/half-hours?date=2026-10-11"]) {
+  for (const route of ["/", "/settings", "/weekly", "/half-hours", "/auth/tesla/callback?state=bad&code=synthetic-code", "/api/export/half-hours?date=2026-10-11"]) {
     const response = await request(base + route);
     const location = response.headers.get("location");
     if (![307, 308].includes(response.status) || !location || new URL(location, base).pathname !== "/login") throw new Error(`Unauthorized route was not protected: ${route}`);
@@ -56,9 +56,14 @@ try {
   const loginHtml = await login.text();
   if (login.status !== 200 || !loginHtml.includes('type="password"')) throw new Error("Worker login page did not render.");
   if (!login.headers.has("content-security-policy")) throw new Error("Worker security headers are missing.");
+  const domainKey = await request(base + "/.well-known/appspecific/com.tesla.3p.public-key.pem");
+  if (domainKey.status !== 200 || !(await domainKey.text()).startsWith("-----BEGIN PUBLIC KEY-----")) throw new Error("Tesla public domain key is not anonymously accessible.");
   const version = createHash("sha256").update(passwordHash).digest("hex");
   const token = await new SignJWT({ version }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("8h").setIssuer("home-energy").setAudience("home-energy-web").sign(new TextEncoder().encode(sessionKey));
   const authHeaders = { Cookie: "energy-session=" + token };
+  const invalidTesla = await request(base + "/auth/tesla/callback?state=bad&code=synthetic-code", { headers: authHeaders });
+  const teslaLocation = invalidTesla.headers.get("location");
+  if (invalidTesla.status !== 303 || !teslaLocation || new URL(teslaLocation).pathname !== "/settings" || teslaLocation.includes("synthetic-code") || invalidTesla.headers.get("cache-control") !== "no-store" || invalidTesla.headers.get("referrer-policy") !== "no-referrer") throw new Error("Tesla callback did not safely reject invalid state.");
   const invalidExport = await request(base + "/api/export/half-hours?date=bad", { headers: authHeaders });
   if (invalidExport.status !== 400) throw new Error("Worker did not accept its signed session in the BFF.");
   const authenticated = await request(base + "/", { headers: authHeaders });
