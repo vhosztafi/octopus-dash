@@ -63,10 +63,6 @@ object ApiDeploy : BuildType({
             name = "Deploy and verify IIS API"
             scriptContent = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ci/deploy-api.ps1"
         }
-        script {
-            name = "One-time encrypted Cloudflare API commissioning"
-            scriptContent = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ci/commission-cloudflare.ps1"
-        }
     }
     triggers {
         finishBuildTrigger {
