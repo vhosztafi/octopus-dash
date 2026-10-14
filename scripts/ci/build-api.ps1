@@ -12,7 +12,7 @@ try {
     if (Test-Path -LiteralPath $out) { Remove-Item -LiteralPath $out -Recurse -Force }
     New-Item -ItemType Directory -Path $out | Out-Null
     Run 'dotnet' @('test', 'api/EnergyDash.sln', '-c', $Configuration, '--logger', 'trx', '--results-directory', "$out/test-results")
-    Run 'dotnet' @('publish', 'api/src/EnergyDash.Api/EnergyDash.Api.csproj', '-c', $Configuration, '-r', 'win-x64', '--self-contained', 'true', '-o', "$out/publish")
+    Run 'dotnet' @('publish', 'api/src/EnergyDash.Api/EnergyDash.Api.csproj', '-c', $Configuration, '-r', 'win-x64', '--self-contained', 'true', '-p:RuntimeFrameworkVersion=10.0.13', '-o', "$out/publish")
     foreach ($name in @('EnergyDash.Api.exe', 'EnergyDash.Api.dll', 'web.config')) {
         if (-not (Test-Path -LiteralPath "$out/publish/$name" -PathType Leaf)) { throw "Missing published $name" }
     }
