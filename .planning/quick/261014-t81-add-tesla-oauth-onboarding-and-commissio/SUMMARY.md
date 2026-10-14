@@ -1,6 +1,6 @@
 ---
 id: 261014-t81
-status: incomplete
+status: complete
 ---
 
 # Tesla browser authorization commissioning
@@ -13,6 +13,8 @@ Published only the P-256 public domain key; its private key is ignored and inher
 
 Source commits: 6070568, secure cookie deletion b3b6d4b, callback header fix 7861248. The Worker smoke caught a site-wide Referrer-Policy overriding the callback; the scoped Next header rule fixes it. Windows smoke cleanup now stops only its own child process tree so temporary-directory locks cannot hide test results. Final local OpenNext build and workerd smoke passed, including anonymous public key, invalid callback state, secure cookie clearing and no-referrer/no-store headers. TeamCity CI #10 (7440) and deploy #9 (7442) passed; Cloudflare build 773144a2-49c0-44ba-bdd0-49ab17ab3b8c deployed the new UI. Production public key returns 200 and matches the committed key; the new authenticated app-credential form renders.
 
-The browser is handed to the owner for private Client ID/Client secret entry, Authorize with Tesla and final energy-data consent. Final token exchange, actual site discovery and selection remain pending owner input. Do not mark account authorization complete until these succeed.
+The owner privately entered app credentials and completed Tesla's energy-data consent. The callback successfully saved renewable authorization. Production Test connection returned Tesla connected with one energy site. Selected the sole returned site TR20, saved Settings and verified it persisted after a full reload. Tokens and app secrets were never copied to chat, repository or logs.
 
 Production Quartz worker remains uncommissioned. Credential/site testing through the API is independent of scheduled sync; do not claim Powerwall data ingestion is live until the worker is deployed and real data verified.
+
+The owner then reported missing Octopus data despite configured credentials. Its production Test connection returned Octopus account verified. Continuing through GSD debug to deploy the missing production worker and verify data ingestion; this is a separate operational issue from the completed Tesla authorization.

@@ -21,6 +21,8 @@ Pending authorization expires after 15 minutes and is bound to a signed Secure/h
 
 ## Sync follow-up
 
+Commissioned 2026-10-14: the owner completed the consent flow, the production connection test found one energy site, and TR20 was selected and saved. A full Settings reload verified the site selection persisted.
+
 Connection testing and site discovery run through the API and can work before the Quartz service is deployed. Scheduled live polling and history ingestion require the separate production worker sharing SQL and the certificate-protected key ring. Saving credentials alone does not commission scheduled data collection.
 
 Sources: [Tesla onboarding](https://developer.tesla.com/docs/fleet-api/getting-started/what-is-fleet-api), [third-party OAuth](https://developer.tesla.com/docs/fleet-api/authentication/third-party-tokens), [scope definitions](https://developer.tesla.com/docs/fleet-api/authentication/overview), [partner registration](https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints).

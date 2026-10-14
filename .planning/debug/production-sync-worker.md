@@ -1,5 +1,5 @@
 ---
-status: investigating
+status: blocked
 trigger: "Also I cannot see any octopus data, although that's configured for sure"
 created: 2026-10-14
 updated: 2026-10-14
@@ -15,9 +15,11 @@ updated: 2026-10-14
 hypothesis: valid credentials are saved but the persistent command queue has no worker to process it.
 test: inspect deployment artifacts and worker service support, then deploy a dedicated Windows service and verify queue consumption plus dated data/pricing.
 expecting: shared SQL/Data Protection configuration makes existing supplier credentials usable; startup sync imports data.
-next_action: package and deploy the dedicated Quartz worker through TeamCity, with least-privilege virtual service identity, private shared configuration and Windows-compatible heartbeat. Verify actual permissions before provisioning and never log secrets/provider payloads.
+next_action: one-time server/DBA commissioning described in docs/TEAMCITY.md, then rerun the normal pipeline and verify real ingestion. The deploy agent cannot access the production database. No worker service, SQL identity, IIS release or private configuration was changed by the failed preflight.
 
 ## Evidence
+- CI #12 (7448) succeeded with both packages (114.31 MB total artifacts). Automatic deploy #11 (7450) retrieved the artifacts and passed checksum/revision validation, then failed at the worker SQL preflight: NT AUTHORITY\\SYSTEM cannot open OctopusDash_Live. The deployment agent lacks database access; only the API app pool was commissioned. This is an external permissions blocker, logged for follow-up per owner instructions. No attempt was made to bypass SQL security or run the worker as SYSTEM.
+- Repair 553c932 passed all 54 local SQL-inclusive tests, both Windows package preflights and the transitive vulnerability audit. TeamCity CI #11 (7445) succeeded but used the pre-import artifact publication rules; automatic deploy #10 (7447) stopped during artifact resolution before running deployment scripts. Current imported CI rules include both worker artifacts; CI #12 (7448) was manually started with those rules.
 - API CI publishes only EnergyDash.Api; deployment config contains no worker service step.
 - Worker lacks Windows service lifetime support, private server configuration loading and a Windows heartbeat path.
 - Public API tests validate live production Octopus and Tesla credentials; missing data is independent of credential validity.
@@ -32,4 +34,4 @@ next_action: package and deploy the dedicated Quartz worker through TeamCity, wi
 - Missing Tesla authorization: callback and site test passed; site selection persists.
 
 ## Resolution
-Pending implementation and live verification.
+Source repair implemented in 553c932 and locally verified. Hosted commissioning remains blocked on SQL identity provisioning. Production Octopus credentials are valid; scheduled ingestion is still unavailable. Keep this record active until a healthy service and actual meter/rate data are verified.

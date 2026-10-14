@@ -1,6 +1,6 @@
 ---
 id: 261014-t81
-status: in-progress
+status: complete
 description: Add Tesla OAuth onboarding and commission production Powerwall authorization
 ---
 
