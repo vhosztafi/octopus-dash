@@ -64,6 +64,8 @@ try {
   const invalidTesla = await request(base + "/auth/tesla/callback?state=bad&code=synthetic-code", { headers: authHeaders });
   const teslaLocation = invalidTesla.headers.get("location");
   if (invalidTesla.status !== 303 || !teslaLocation || new URL(teslaLocation).pathname !== "/settings" || teslaLocation.includes("synthetic-code") || invalidTesla.headers.get("cache-control") !== "no-store" || invalidTesla.headers.get("referrer-policy") !== "no-referrer") throw new Error("Tesla callback did not safely reject invalid state.");
+  const clearedTeslaCookie = invalidTesla.headers.get("set-cookie") ?? "";
+  if (!clearedTeslaCookie.includes("__Host-energy-tesla-oauth=") || !/max-age=0/i.test(clearedTeslaCookie) || !/; secure/i.test(clearedTeslaCookie)) throw new Error("Tesla callback did not clear its secure state cookie.");
   const invalidExport = await request(base + "/api/export/half-hours?date=bad", { headers: authHeaders });
   if (invalidExport.status !== 400) throw new Error("Worker did not accept its signed session in the BFF.");
   const authenticated = await request(base + "/", { headers: authHeaders });

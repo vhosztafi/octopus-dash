@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const jar = await cookies();
   const state = request.nextUrl.searchParams.get("state");
   const valid = await validTeslaState(jar.get(teslaStateCookie)?.value, state, jar.get(sessionCookie)?.value);
-  jar.delete(teslaStateCookie);
+  jar.set(teslaStateCookie, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
   let notice = "Tesla authorization expired or did not match this session. Start again from Settings.";
   if (valid) {
     const error = request.nextUrl.searchParams.has("error");
