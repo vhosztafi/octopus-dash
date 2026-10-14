@@ -27,6 +27,8 @@ SQL session application locks serialize each job group across overlapping IIS pr
 
 `/api/scheduler` is protected by the existing internal bearer authentication. Deployment now requires enabled/running/non-standby Quartz status in addition to database health and authentication checks. No scheduler management endpoints or dashboard routes are added. Verify actual dated consumption/rates separately before declaring supplier sync healthy.
 
+Verified 2026-10-14: CI #13 passed and [automatic deploy #12](https://teamcity.vilmos.co.uk/buildConfiguration/OctopusDash_ApiDeploy/7455) succeeded for `6b554db`. Scheduler, SQL/HTTPS health and bearer authentication checks passed. The production browser now shows dated meter readings/tariff pricing and fresh Tesla telemetry. The remaining SmartFlex discount warning is a separate account/device commissioning item; it no longer indicates absent meter ingestion. The former separate-service SQL blocker is superseded without granting any additional database access.
+
 Local verification: run `scripts/ci/build-api.ps1` with `RUN_SQL_TESTS=1` and Docker running. Without that explicit setting, the real SQL Testcontainers test is skipped; pure/domain/provider/API tests still run. `scripts/ci/deploy-api.ps1 -ValidateOnly -ArtifactDirectory output/teamcity-api` validates the package without touching IIS.
 
 References: [Oktoberfest scripts](https://github.com/solutioniser/tr20-oktoberfest-2026/tree/master/scripts/ci), [TeamCity same-chain artifacts](https://www.jetbrains.com/help/teamcity/artifact-dependencies.html), [ASP.NET Core IIS hosting](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/iis/?view=aspnetcore-10.0).
