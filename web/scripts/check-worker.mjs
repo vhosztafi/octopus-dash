@@ -29,6 +29,7 @@ await writeFile(path.join(directory, "wrangler.json"), JSON.stringify(config));
 // Running from this temporary directory prevents loading the owner's .dev.vars.
 const child = spawn(process.execPath, [path.join(root, "node_modules/wrangler/bin/wrangler.js"), "dev", "--local", "--config", path.join(directory, "wrangler.json"), "--port", String(port), "--ip", "127.0.0.1"], {
   cwd: directory,
+  windowsHide: true,
   env: { ...process.env, WRANGLER_SEND_METRICS: "false", CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false" },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -63,7 +64,7 @@ try {
   const authHeaders = { Cookie: "energy-session=" + token };
   const invalidTesla = await request(base + "/auth/tesla/callback?state=bad&code=synthetic-code", { headers: authHeaders });
   const teslaLocation = invalidTesla.headers.get("location");
-  if (invalidTesla.status !== 303 || !teslaLocation || new URL(teslaLocation).pathname !== "/settings" || teslaLocation.includes("synthetic-code") || invalidTesla.headers.get("cache-control") !== "no-store" || invalidTesla.headers.get("referrer-policy") !== "no-referrer") throw new Error("Tesla callback did not safely reject invalid state.");
+  if (invalidTesla.status !== 303 || !teslaLocation || new URL(teslaLocation).pathname !== "/settings" || teslaLocation.includes("synthetic-code") || invalidTesla.headers.get("cache-control") !== "no-store" || invalidTesla.headers.get("referrer-policy") !== "no-referrer") throw new Error(`Tesla callback did not safely reject invalid state: status=${invalidTesla.status}, location=${teslaLocation}, cache=${invalidTesla.headers.get("cache-control")}, referrer=${invalidTesla.headers.get("referrer-policy")}.`);
   const clearedTeslaCookie = invalidTesla.headers.get("set-cookie") ?? "";
   if (!clearedTeslaCookie.includes("__Host-energy-tesla-oauth=") || !/max-age=0/i.test(clearedTeslaCookie) || !/; secure/i.test(clearedTeslaCookie)) throw new Error("Tesla callback did not clear its secure state cookie.");
   const invalidExport = await request(base + "/api/export/half-hours?date=bad", { headers: authHeaders });
@@ -78,9 +79,13 @@ try {
 } catch (error) {
   // This Worker uses synthetic credentials only.
   console.error(logs);
+  console.error(error);
   throw error;
 } finally {
-  child.kill("SIGTERM");
+  if (process.platform === "win32" && child.exitCode === null && child.pid) {
+    const stop = spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore", windowsHide: true });
+    await new Promise(resolve => { stop.once("exit", resolve); stop.once("error", resolve); });
+  } else child.kill("SIGTERM");
   await new Promise(resolve => { if (child.exitCode !== null || spawnError) resolve(); else { child.once("exit", resolve); setTimeout(() => { child.kill("SIGKILL"); resolve(); }, 5000).unref(); } });
-  await rm(directory, { recursive: true, force: true });
+  await rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }

@@ -17,6 +17,10 @@ const config: NextConfig = {
           },
         ],
       },
+      {
+        source: "/auth/tesla/callback",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
     ];
   },
 };
