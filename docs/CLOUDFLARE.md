@@ -33,7 +33,7 @@ Configure these as **Secret** values in Worker Settings → Variables & Secrets.
 
 Do not upload Octopus or Tesla credentials, SQL credentials, or the Data Protection certificate to the frontend Worker. Those stay with the API/worker deployment. Do not commit `.env`, `.dev.vars` or generated Worker output. The initial deployment denies login until the production login secrets are configured. After login is configured, unavailable backend data is shown through the existing error screen until the API is commissioned.
 
-On 2026-10-13, the owner selected the existing localhost password for production. Its bcrypt hash was uploaded as `APP_PASSWORD_HASH` with a separate random production `SESSION_SECRET` using Wrangler's stdin secret upload. Production browser sign-in succeeded. The production API token transfer is pending explicit approval; until connected, an authenticated session reaches the unavailable-data screen. The password and secret values are never committed or written to build logs.
+On 2026-10-13, the owner selected the existing localhost password for production. Its bcrypt hash was uploaded as `APP_PASSWORD_HASH` with a separate random production `SESSION_SECRET` using Wrangler's stdin secret upload. On 2026-10-14, the owner explicitly approved connecting the existing production API token. A temporary RSA4096/OAEP-SHA256 envelope carried ciphertext through TeamCity; the token was decrypted locally and uploaded through Wrangler stdin as `INTERNAL_API_TOKEN`. All three runtime secrets are configured. Fresh production browser login and dashboard API rendering succeeded. The temporary transfer step, scripts and private key were removed afterward. The password and secret values were never committed or written to build logs.
 
 For local Worker tests, copy `web/.dev.vars.example` to the ignored `web/.dev.vars` and populate it with synthetic credentials. Run `npm run build:worker`, then `npm run preview:worker`. Ordinary `npm run dev`, `npm run build` and Docker remain supported. Edge middleware is used because the adapter's Node middleware path is experimental; Server Actions and BFF routes independently enforce sessions.
 
@@ -41,7 +41,7 @@ The Cloudflare login binding limits attempts across isolates within each Cloudfl
 
 ## Backend follow-up
 
-Deploy the API origin over trusted HTTPS, enforce the same internal bearer token, and verify requests from the Worker before commissioning data. SQL and the Quartz worker remain private. A Cloudflare Access service token or tunnel/VPC restrictions may be added during backend deployment; configure corresponding BFF headers then if required. Never disable authentication just to make the separate origin reachable.
+The IIS API origin uses trusted HTTPS and enforces the same internal bearer token as the Worker; authenticated status returns 200 and unauthenticated API requests return 401. The Worker successfully renders production data contracts. SQL and the Quartz worker remain private. Production supplier credentials and the separate Quartz Windows service still require commissioning before meter data can sync. A Cloudflare Access service token or tunnel/VPC restrictions may be added later; configure corresponding BFF headers then if required. Never disable authentication just to make the separate origin reachable.
 
 ## Operations
 
