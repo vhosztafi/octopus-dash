@@ -36,7 +36,7 @@ For local Windows testing, after installing web dependencies, run `./scripts/Ini
 5. `docker compose up --build -d`. API applies the committed EF migration; worker starts after SQL/API health. Only the web port is published, on loopback. Put an HTTPS reverse proxy in front of the web app. Session cookies are always Secure. Use LAN/Tailscale access; do not publish SQL or the API.
 6. In Settings, save/test connections, select the Tesla energy site, set the SmartFlex device ID, choose gas meter units/calorific value and press **Sync now**. Sync runs through a persistent SQL command queue polled every 15 seconds. The initial backfill defaults to 90 days; subsequent meter ingestion re-fetches 7 days.
 
-The deployment currently assumes one worker process and one web process. Quartz serializes heavy source/pricing commands; live polling and report scheduling have independent JobKeys. SQL application locks serialize OAuth refresh across API and worker and prevent overlapping weekly sends. Supplied dual-register night start/end settings apply only to day/night tariffs; time-of-use standard rates determine their own windows.
+Production IIS hosts Quartz in the API; Compose uses one separate worker with API scheduling disabled. Quartz and per-group SQL session leases serialize heavy source/pricing commands across overlapping IIS processes; live polling and report scheduling have independent JobKeys. The owner keeps IIS running and recycles it daily at 03:00; startup sync catches up automatically. SQL application locks serialize OAuth refresh across API and worker and prevent overlapping weekly sends. Supplied dual-register night start/end settings apply only to day/night tariffs; time-of-use standard rates determine their own windows.
 
 ## Checks
 

@@ -45,6 +45,8 @@ services:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?Set INTERNAL_API_TOKEN}
       Database__MigrateOnStartup: "true"
       SampleMode: "false"
+      # Compose keeps its separate worker; production IIS hosts Quartz in the API instead.
+      Scheduling__Enabled: "false"
     volumes: ["${DATA_PROTECTION_CERT:?Set DATA_PROTECTION_CERT}:/run/secrets/data-protection.pfx:ro"]
     depends_on: {mssql: {condition: service_healthy}}
     healthcheck:

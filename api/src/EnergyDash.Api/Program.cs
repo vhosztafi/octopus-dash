@@ -7,6 +7,7 @@ using EnergyDash.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Quartz;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddPrivateServerConfiguration();
@@ -22,6 +23,8 @@ builder.Services.AddProblemDetails(); builder.Services.AddOpenApi(o => o.AddSche
 builder.Services.AddHttpsRedirection(o => o.HttpsPort = builder.Configuration.GetValue<int?>("HttpsRedirection:HttpsPort"));
 builder.Services.ConfigureHttpJsonOptions(o => { o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()); o.SerializerOptions.NumberHandling = JsonNumberHandling.Strict; });
 builder.Services.AddEnergyInfrastructure(builder.Configuration, sample);
+var scheduling = !sample && builder.Configuration.GetValue("Scheduling:Enabled", true);
+if (scheduling) builder.Services.AddEnergyScheduling();
 builder.Services.AddSingleton<SampleDashboard>();
 if (sample) builder.Services.AddScoped<IDashboardData>(sp => sp.GetRequiredService<SampleDashboard>());
 else builder.Services.AddScoped<IDashboardData>(sp => sp.GetRequiredService<DashboardQueries>());
@@ -52,6 +55,12 @@ app.Use(async (context, next) =>
 app.MapGet("/health", async (EnergyDbContext db, CancellationToken ct) => sample || await db.Database.CanConnectAsync(ct) ? Results.Ok(new { status = "healthy" }) : Results.StatusCode(503));
 app.MapOpenApi();
 var api = app.MapGroup("/api");
+api.MapGet("/scheduler", async (IServiceProvider services, CancellationToken ct) =>
+{
+    if (!scheduling) return Results.Ok(new { enabled = false, running = false, standby = false });
+    var scheduler = await services.GetRequiredService<ISchedulerFactory>().GetScheduler(ct);
+    return Results.Ok(new { enabled = true, running = scheduler.IsStarted && !scheduler.IsShutdown, standby = scheduler.InStandbyMode });
+});
 static bool ValidDay(string value) => NodaTime.Text.LocalDatePattern.Iso.Parse(value).Success;
 static bool ValidWeek(string value) => ValidDay(value) && EnergyTime.ParseDay(value).DayOfWeek == NodaTime.IsoDayOfWeek.Monday;
 static bool ValidFilter(string value) => value is "all" or "peak" or "off" or "disp" or "over";

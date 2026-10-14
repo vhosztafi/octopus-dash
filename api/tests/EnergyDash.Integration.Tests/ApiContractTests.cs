@@ -26,6 +26,17 @@ public sealed class ApiContractTests : IClassFixture<ApiFactory>
     {
         using var client = factory.CreateClient(); Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/status")).StatusCode); Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/openapi/v1.json")).StatusCode);
     }
+    [Fact]
+    public async Task SchedulerStatusIsPrivateAndSampleModeNeverStartsSupplierJobs()
+    {
+        using var anonymous = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/scheduler")).StatusCode);
+        using var authorized = factory.AuthorizedClient();
+        var status = await authorized.GetFromJsonAsync<JsonElement>("/api/scheduler");
+        Assert.False(status.GetProperty("enabled").GetBoolean());
+        Assert.False(status.GetProperty("running").GetBoolean());
+        Assert.Null(factory.Services.GetService(typeof(Quartz.ISchedulerFactory)));
+    }
     [Theory]
     [InlineData("/api/status", "sample")]
     [InlineData("/api/days/latest-complete", "date")]

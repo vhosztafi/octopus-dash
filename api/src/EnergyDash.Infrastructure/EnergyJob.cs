@@ -1,17 +1,22 @@
 using EnergyDash.Core;
-using EnergyDash.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Quartz;
 
-namespace EnergyDash.Worker;
+namespace EnergyDash.Infrastructure;
 
 [DisallowConcurrentExecution]
-public sealed class EnergyJob(EnergyDbContext db, IngestionService ingest, PricingService pricing, TelemetryService telemetry, AlertService alerts, ReportService reports, SettingsStore settings, ILogger<EnergyJob> logger) : IJob
+public sealed class EnergyJob(EnergyDbContext db, IngestionService ingest, PricingService pricing, TelemetryService telemetry, AlertService alerts, ReportService reports, SettingsStore settings, SyncCommandProcessor commands, ILogger<EnergyJob> logger) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
         var ct = context.CancellationToken; var kind = context.MergedJobDataMap.GetString("kind") ?? "Sync";
-        try { await RunAsync(kind, ct); }
+        try
+        {
+            await using var lease = await JobExecutionLease.TryAcquireAsync(db.Database.GetConnectionString()!, context.JobDetail.Key.Name, ct);
+            if (lease is null) return;
+            await RunAsync(kind, ct);
+        }
         catch (Exception ex) when (ex is not OperationCanceledException) { logger.LogError("Energy job {Kind} failed ({ExceptionType}); details withheld to protect credentials", kind, ex.GetType().Name); }
     }
     private async Task LoggedAsync(string source, Func<Task> action, CancellationToken ct)
@@ -65,13 +70,10 @@ public sealed class EnergyJob(EnergyDbContext db, IngestionService ingest, Prici
     }
     private async Task CommandsAsync(CancellationToken ct)
     {
-        // Single-worker queue; reclaim interrupted commands after 30 minutes.
-        var stale = DateTime.UtcNow.AddMinutes(-30);
-        var command = await db.Set<SyncCommand>().OrderBy(c => c.CreatedUtc).FirstOrDefaultAsync(c => c.CompletedUtc == null && (c.ClaimedUtc == null || c.ClaimedUtc < stale), ct);
-        if (command is null) return;
-        command.ClaimedUtc = DateTime.UtcNow; await db.SaveChangesAsync(ct);
-        try { if (command.Kind == "Report") await reports.SendAsync(command.Argument!, ct); else await RunAsync(command.Kind, ct); }
-        catch (Exception ex) when (ex is not OperationCanceledException) { command.Error = "Failed: " + ex.GetType().Name; }
-        finally { if (db.Entry(command).State == EntityState.Detached) db.Attach(command); command.CompletedUtc = DateTime.UtcNow; db.Entry(command).State = EntityState.Modified; await db.SaveChangesAsync(CancellationToken.None); }
+        await commands.ExecuteNextAsync(async (command, token) =>
+        {
+            if (command.Kind == "Report") await reports.SendAsync(command.Argument!, token);
+            else await RunAsync(command.Kind, token);
+        }, ct);
     }
 }

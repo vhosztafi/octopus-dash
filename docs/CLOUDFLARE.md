@@ -41,7 +41,7 @@ The Cloudflare login binding limits attempts across isolates within each Cloudfl
 
 ## Backend follow-up
 
-The IIS API origin uses trusted HTTPS and enforces the same internal bearer token as the Worker; authenticated status returns 200 and unauthenticated API requests return 401. The Worker successfully renders production data contracts. SQL and the Quartz worker remain private. Production Octopus credentials and Tesla OAuth/site TR20 passed connection tests. The separate Quartz Windows service is packaged but its deployment is blocked on server SQL identity provisioning; [TeamCity commissioning details](TEAMCITY.md) record the required follow-up before meter data can sync. A Cloudflare Access service token or tunnel/VPC restrictions may be added later; configure corresponding BFF headers then if required. Never disable authentication just to make the separate origin reachable.
+The IIS API origin uses trusted HTTPS and enforces the same internal bearer token as the Worker; authenticated status returns 200 and unauthenticated API requests return 401. The Worker successfully renders production data contracts. SQL and the Quartz worker remain private. Production Octopus credentials and Tesla OAuth/site TR20 passed connection tests. Quartz now hosts inside the existing IIS API and uses its database identity; no separate Windows service or SQL provisioning is needed. See [TeamCity lifecycle details](TEAMCITY.md) for the owner-managed always-running/03:00 recycle configuration. A Cloudflare Access service token or tunnel/VPC restrictions may be added later; configure corresponding BFF headers then if required. Never disable authentication just to make the separate origin reachable.
 
 ## Operations
 

@@ -18,8 +18,6 @@ object ApiCi : BuildType({
     artifactRules = """
         output/teamcity-api/api.zip => api
         output/teamcity-api/api-manifest.json => api
-        output/teamcity-api/worker.zip => worker
-        output/teamcity-api/worker-manifest.json => worker
         output/teamcity-api/test-results/** => test-results
     """.trimIndent()
     publishArtifacts = PublishMode.SUCCESSFUL
@@ -62,8 +60,8 @@ object ApiDeploy : BuildType({
     }
     steps {
         script {
-            name = "Deploy and verify IIS API and sync worker"
-            scriptContent = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ci/deploy-backend.ps1"
+            name = "Deploy and verify IIS API with Quartz scheduling"
+            scriptContent = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ci/deploy-api.ps1"
         }
     }
     triggers {
@@ -85,8 +83,6 @@ object ApiDeploy : BuildType({
                 artifactRules = """
                     api/api.zip => incoming
                     api/api-manifest.json => incoming
-                    worker/worker.zip => incoming
-                    worker/worker-manifest.json => incoming
                 """.trimIndent()
             }
         }

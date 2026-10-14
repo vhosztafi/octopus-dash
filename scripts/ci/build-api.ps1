@@ -22,10 +22,4 @@ try {
     Set-Content -LiteralPath "$out/publish/build-revision.txt" -Value $revision -Encoding ascii
     Compress-Archive -Path "$out/publish/*" -DestinationPath "$out/api.zip"
     @{ revision = $revision; sha256 = (Get-FileHash -LiteralPath "$out/api.zip" -Algorithm SHA256).Hash } | ConvertTo-Json | Set-Content -LiteralPath "$out/api-manifest.json" -Encoding ascii
-    Run 'dotnet' @('publish', 'api/src/EnergyDash.Worker/EnergyDash.Worker.csproj', '-c', $Configuration, '-r', 'win-x64', '--self-contained', 'true', '-p:RuntimeFrameworkVersion=10.0.13', '-o', "$out/worker-publish")
-    if (-not (Test-Path -LiteralPath "$out/worker-publish/EnergyDash.Worker.exe" -PathType Leaf)) { throw 'Missing published Windows worker' }
-    if (Get-ChildItem -LiteralPath "$out/worker-publish" -Recurse -File | Where-Object { $_.Extension -in @('.pfx', '.p12') -or $_.Name -like '.env*' -or $_.Name -in @('server-settings.json', 'appsettings.Production.json') }) { throw 'Private configuration found in worker output' }
-    Set-Content -LiteralPath "$out/worker-publish/build-revision.txt" -Value $revision -Encoding ascii
-    Compress-Archive -Path "$out/worker-publish/*" -DestinationPath "$out/worker.zip"
-    @{ revision = $revision; sha256 = (Get-FileHash -LiteralPath "$out/worker.zip" -Algorithm SHA256).Hash } | ConvertTo-Json | Set-Content -LiteralPath "$out/worker-manifest.json" -Encoding ascii
 } finally { Pop-Location }

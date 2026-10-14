@@ -93,6 +93,8 @@ function Check-Deployment {
             $health = Invoke-RestMethod -Uri "https://$siteHost/health" -TimeoutSec 15
             if ($health.status -ne 'healthy') { throw 'Unhealthy' }
             $null = Invoke-RestMethod -Uri "https://$siteHost/api/status" -Headers @{ Authorization = 'Bearer ' + $settings.INTERNAL_API_TOKEN } -TimeoutSec 15
+            $scheduler = Invoke-RestMethod -Uri "https://$siteHost/api/scheduler" -Headers @{ Authorization = 'Bearer ' + $settings.INTERNAL_API_TOKEN } -TimeoutSec 15
+            if (-not $scheduler.enabled -or -not $scheduler.running -or $scheduler.standby) { throw 'Quartz scheduler is not running' }
             $rejected = $false
             try { $null = Invoke-WebRequest -UseBasicParsing -Uri "https://$siteHost/api/status" -TimeoutSec 15 }
             catch { $rejected = $_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 401 }
@@ -104,7 +106,7 @@ function Check-Deployment {
         }
         Start-Sleep -Seconds 5
     }
-    throw 'HTTPS database health or authentication verification failed'
+    throw 'HTTPS database health, Quartz scheduling or authentication verification failed'
 }
 try {
     if (-not (Test-Path -LiteralPath $configPath)) {
@@ -142,7 +144,7 @@ try {
     $aspNet = $webConfig.SelectSingleNode('//aspNetCore')
     if (-not $aspNet -or -not (Test-Path -LiteralPath (Join-Path $stage 'EnergyDash.Api.exe'))) { throw 'Invalid IIS publish output' }
     $environment = $webConfig.CreateElement('environmentVariables')
-    foreach ($item in @{ ASPNETCORE_ENVIRONMENT = 'Production'; ENERGYDASH_CONFIG_FILE = $configPath }.GetEnumerator()) {
+    foreach ($item in @{ ASPNETCORE_ENVIRONMENT = 'Production'; ENERGYDASH_CONFIG_FILE = $configPath; Scheduling__Enabled = 'true' }.GetEnumerator()) {
         $variable = $webConfig.CreateElement('environmentVariable')
         $variable.SetAttribute('name', $item.Key)
         $variable.SetAttribute('value', $item.Value)

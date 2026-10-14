@@ -3,7 +3,7 @@
 Repository: https://github.com/vhosztafi/octopus-dash.git, default branch `master`.
 TeamCity imports `.teamcity/settings.kts` as portable Kotlin DSL. Keep versioned settings read-only from VCS, so production pipeline changes are reviewed in Git.
 
-`api-ci` runs backend tests and publishes self-contained `win-x64` API and worker ZIPs, TRX results and SHA-256/revision manifests. `api-deploy` follows successful default-branch CI builds, with snapshot and strict same-chain artifact dependencies. Deployment concurrency is one; only the existing Windows agent with `env.ZENX_ROLE=deploy` is eligible. CI watches `api/**`, `scripts/ci/**` and `.teamcity/**`.
+`api-ci` runs backend tests and publishes a self-contained `win-x64` API ZIP, TRX results and a SHA-256/revision manifest. `api-deploy` follows successful default-branch CI builds, with snapshot and strict same-chain artifact dependencies. Deployment concurrency is one; only the existing Windows agent with `env.ZENX_ROLE=deploy` is eligible. CI watches `api/**`, `scripts/ci/**` and `.teamcity/**`.
 
 The existing IIS site must have the HTTPS host binding `octopus-dash-api.vilmos.co.uk`, physical path `D:\Websites\octopus-dash-api.vilmos.co.uk\www`, and an ApplicationPoolIdentity already granted access to SQL database `OctopusDash_Live` on `.`. The ASP.NET Core Hosting Bundle/ANCM must be installed; the package supplies its own .NET runtime. The deploy script discovers the matching pool and sets it to 64-bit/no managed CLR.
 
@@ -19,34 +19,13 @@ Cleanup revision `7a86097` passed [CI #9](https://teamcity.vilmos.co.uk/buildCon
 
 CI #7 encountered newly published cryptography advisories. DataProtection.EntityFrameworkCore and the PKCS override now resolve version 10.0.13; Windows self-contained publish explicitly uses runtime 10.0.13. All 52 local backend tests including SQL passed, the Windows package published, and the NuGet transitive vulnerability audit was clean. Audit warnings remain fatal. References: [Microsoft PKCS advisory](https://github.com/advisories/GHSA-846f-f764-76mx), [Microsoft XML advisory](https://github.com/advisories/GHSA-7hqp-7c5m-4vq6).
 
-Quartz runs in the separate `EnergyDash.Worker` process. `deploy-backend.ps1` validates both packages and worker SQL permissions before any release changes, stops the existing owned worker before API migrations, then installs/verifies the worker. The fixed service `OctopusDashWorker` runs as `NT SERVICE\OctopusDashWorker` from the site's sibling `worker` directory, shares the private configuration/PFX and SQL key ring, and writes a fresh SQL/credential-decryption heartbeat under `_energy-private\worker-state`. Automatic startup/recovery and private backup/file rollback are configured. The worker needs database reader/writer roles, not owner or server administrator.
+Quartz runs inside the IIS API using `AddQuartzHostedService`, under the existing application pool identity and private configuration. No Windows service, extra SQL login or deploy-agent SQL access is required. The earlier separate-service proposal and its SQL provisioning instructions are superseded by the owner's decision to use the existing API process. No service or SQL principal was created by that failed preflight.
 
-Worker commissioning is currently blocked: [CI #12](https://teamcity.vilmos.co.uk/buildConfiguration/OctopusDash_ApiCi/7448) passed for `553c932`; [deploy #11](https://teamcity.vilmos.co.uk/buildConfiguration/OctopusDash_ApiDeploy/7450) retrieved both artifacts but stopped before changing IIS or creating a service. The agent runs as `NT AUTHORITY\SYSTEM`, which cannot open `OctopusDash_Live`. Octopus account testing passed; Tesla authorization and TR20 site selection are saved. Neither proves scheduled ingestion until this service runs.
+The owner configures IIS for AlwaysRunning, idle timeout zero and application preload (with Application Initialization installed), plus a daily 03:00 recycle. Deployment preserves those settings. Keep one application pool worker process. Quartz stops with the API and runs a full account/rates/consumption/history sync at startup, covering the account trigger at the recycle boundary. Rates remain scheduled at 03:10 and pricing at 03:30, London time. Brief deployment/recycle gaps do not create meter readings or fabricated telemetry.
 
-One-time server/DBA follow-up: an administrator should create the **stopped** service with the exact account/path below, then a SQL administrator should provision its login/user and data roles. The deployment account only needs database connection/metadata visibility once these principals exist; it does not need data roles or login-management rights. Review and execute on MRB2C-DEV, not the developer machine:
+SQL session application locks serialize each job group across overlapping IIS processes; live telemetry and weekly scheduling remain independent of the heavy pipeline. Gracefully interrupted queue commands are released for retry; forcibly killed claims are reclaimed after 30 minutes. Weekly send crash handling remains as documented in OPERATIONS.md. Compose retains its optional separate worker and explicitly sets `Scheduling__Enabled=false` on the API to avoid duplicate schedulers. Sample mode never starts provider jobs.
 
-```powershell
-sc.exe create OctopusDashWorker binPath= D:\Websites\octopus-dash-api.vilmos.co.uk\worker\EnergyDash.Worker.exe start= demand obj= "NT SERVICE\OctopusDashWorker"
-```
-
-```sql
-USE [master];
-IF SUSER_ID(N'NT SERVICE\OctopusDashWorker') IS NULL
-    CREATE LOGIN [NT SERVICE\OctopusDashWorker] FROM WINDOWS;
-IF SUSER_ID(N'NT AUTHORITY\SYSTEM') IS NULL
-    CREATE LOGIN [NT AUTHORITY\SYSTEM] FROM WINDOWS;
-GRANT VIEW DEFINITION ON LOGIN::[NT SERVICE\OctopusDashWorker] TO [NT AUTHORITY\SYSTEM];
-USE [OctopusDash_Live];
-IF USER_ID(N'NT SERVICE\OctopusDashWorker') IS NULL
-    CREATE USER [NT SERVICE\OctopusDashWorker] FOR LOGIN [NT SERVICE\OctopusDashWorker];
-ALTER ROLE [db_datareader] ADD MEMBER [NT SERVICE\OctopusDashWorker];
-ALTER ROLE [db_datawriter] ADD MEMBER [NT SERVICE\OctopusDashWorker];
-IF USER_ID(N'NT AUTHORITY\SYSTEM') IS NULL
-    CREATE USER [NT AUTHORITY\SYSTEM] FOR LOGIN [NT AUTHORITY\SYSTEM];
-GRANT CONNECT, VIEW DEFINITION TO [NT AUTHORITY\SYSTEM];
-```
-
-Then run the normal CI/deploy chain. Require the fresh heartbeat, successful source SyncLog entries and real dated meter/rate data in the dashboard before closing `.planning/debug/production-sync-worker.md`. Do not grant SYSTEM db_owner/sysadmin to bypass this preflight. CI #11 used the artifact rules from before Kotlin settings import; a fresh build with the imported worker rules resolved that separate artifact issue.
+`/api/scheduler` is protected by the existing internal bearer authentication. Deployment now requires enabled/running/non-standby Quartz status in addition to database health and authentication checks. No scheduler management endpoints or dashboard routes are added. Verify actual dated consumption/rates separately before declaring supplier sync healthy.
 
 Local verification: run `scripts/ci/build-api.ps1` with `RUN_SQL_TESTS=1` and Docker running. Without that explicit setting, the real SQL Testcontainers test is skipped; pure/domain/provider/API tests still run. `scripts/ci/deploy-api.ps1 -ValidateOnly -ArtifactDirectory output/teamcity-api` validates the package without touching IIS.
 
@@ -54,4 +33,4 @@ References: [Oktoberfest scripts](https://github.com/solutioniser/tr20-oktoberfe
 
 Commissioning status (2026-10-13): [TeamCity project](https://teamcity.vilmos.co.uk/project/OctopusDash) is created and synchronized. [CI #5](https://teamcity.vilmos.co.uk/buildConfiguration/OctopusDash_ApiCi/7413) passed and [deploy #5](https://teamcity.vilmos.co.uk/buildConfiguration/OctopusDash_ApiDeploy/7415) succeeded on `deploy-agent-zenx` (`MRB2C-DEV`). HTTPS certificate/binding, SQL integrated-security migration/startup and private configuration/PFX provisioning are verified. [API health](https://octopus-dash-api.vilmos.co.uk/health) returns healthy over validated TLS; authenticated `/api/status` succeeds and unauthenticated requests return 401. The Cloudflare API DNS A record points to `77.68.99.121` (DNS only).
 
-For future HTTPS binding recovery, install a trusted server certificate with the hostname `octopus-dash-api.vilmos.co.uk` (or `*.vilmos.co.uk`) in LocalMachine/My, including its private key and Server Authentication usage. The script can create the requested SNI binding for the verified site using that existing certificate; it does not obtain public certificates or disable TLS validation. The existing application pool account is preserved; the identity guard accepts WebAdministration's named `ApplicationPoolIdentity` or numeric `4` representation. See the GSD quick task summary and resolved deployment debug record for evidence. Quartz service, frontend runtime secrets and provider account commissioning remain separate follow-ups.
+For future HTTPS binding recovery, install a trusted server certificate with the hostname `octopus-dash-api.vilmos.co.uk` (or `*.vilmos.co.uk`) in LocalMachine/My, including its private key and Server Authentication usage. The script can create the requested SNI binding for the verified site using that existing certificate; it does not obtain public certificates or disable TLS validation. The existing application pool account is preserved; the identity guard accepts WebAdministration's named `ApplicationPoolIdentity` or numeric `4` representation. See the GSD quick task summary and resolved deployment debug record for evidence. Frontend runtime secrets and provider credentials have since been commissioned. See current in-process Quartz notes above for sync hosting.
