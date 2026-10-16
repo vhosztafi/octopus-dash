@@ -57,6 +57,19 @@ try {
   const loginHtml = await login.text();
   if (login.status !== 200 || !loginHtml.includes('type="password"')) throw new Error("Worker login page did not render.");
   if (!login.headers.has("content-security-policy")) throw new Error("Worker security headers are missing.");
+  if (!loginHtml.includes('rel="manifest"') || !loginHtml.includes('apple-touch-icon')) throw new Error("PWA metadata is missing from login.");
+  const manifestResponse = await request(base + "/manifest.webmanifest");
+  if (manifestResponse.status !== 200 || !manifestResponse.headers.get("content-type")?.includes("manifest+json")) throw new Error("PWA manifest is not publicly available.");
+  const manifest = await manifestResponse.json();
+  if (manifest.display !== "standalone" || manifest.start_url !== "/" || manifest.scope !== "/") throw new Error("PWA launch configuration is incorrect.");
+  for (const icon of [...manifest.icons, { src: "/icons/apple-touch-icon.png" }]) {
+    const response = await request(base + icon.src);
+    if (response.status !== 200 || !response.headers.get("content-type")?.includes("image/png")) throw new Error(`PWA icon is unavailable: ${icon.src}`);
+  }
+  const sw = await request(base + "/sw.js");
+  if (sw.status !== 200 || !sw.headers.get("content-type")?.includes("javascript") || sw.headers.get("cache-control") !== "no-store" || sw.headers.get("x-content-type-options") !== "nosniff") throw new Error("Service worker update/security headers are incorrect.");
+  const offline = await request(base + "/offline.html");
+  if (offline.status !== 200 || !(await offline.text()).includes("You’re offline")) throw new Error(`Public offline fallback is unavailable: status=${offline.status}, location=${offline.headers.get("location")}.`);
   const domainKey = await request(base + "/.well-known/appspecific/com.tesla.3p.public-key.pem");
   if (domainKey.status !== 200 || !(await domainKey.text()).startsWith("-----BEGIN PUBLIC KEY-----")) throw new Error("Tesla public domain key is not anonymously accessible.");
   const version = createHash("sha256").update(passwordHash).digest("hex");
@@ -75,7 +88,7 @@ try {
   const scriptPaths = [...new Set([...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]))];
   const scripts = await Promise.all(scriptPaths.map(async url => (await request(new URL(url, base))).text()));
   if (authenticated.status !== 200 || authenticated.headers.get("location") || !html.includes("$RX(") || !scripts.some(source => source.includes("Energy data is unavailable"))) throw new Error("Worker unavailable-API error boundary or assets are missing.");
-  console.log("Worker smoke passed: protected routes, login, security headers, signed session and unavailable API.");
+  console.log("Worker smoke passed: protected routes, login, PWA manifest/icons/offline/worker headers, signed session and unavailable API.");
 } catch (error) {
   // This Worker uses synthetic credentials only.
   console.error(logs);

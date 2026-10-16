@@ -45,6 +45,10 @@ The IIS API origin uses trusted HTTPS and enforces the same internal bearer toke
 
 ## Operations
 
+Home Energy is installable as a PWA using the browser's Install app option, or Safari's Share → Add to Home Screen on iPhone/iPad. The web manifest and Apple touch icon are available before sign-in; installed launches still require the existing secure session. The production service worker caches only a public offline notice, never dashboard HTML, readings, prices, RSC, exports, credentials or OAuth responses. Reconnect and choose Try again to load current data. Form submissions and OAuth/API requests remain online-only. Service worker updates bypass HTTP caches, and activation removes only obsolete Home Energy offline caches. Keep the cache version in `public/sw.js` in sync when changing the offline page.
+
+Cloudflare static assets use `html_handling: none` so `/offline.html` is served at the same exact URL as Next.js/Docker, without an extension-removal redirect. Keep the service-worker headers in both `next.config.ts` and `public/_headers`; the latter applies when Cloudflare serves static assets before the Worker. PWA behavior follows the [Next.js PWA guide](https://nextjs.org/docs/app/guides/progressive-web-apps).
+
 Push changes to `master` to trigger Cloudflare Builds. Check the Worker’s Deployments/Builds page for build and deployment status. Use Cloudflare’s previous-version rollback when needed. Keep runtime secrets stable across normal builds so signed sessions survive deployments; rotate the session key or password hash to revoke them.
 
 Sources: [Cloudflare OpenNext guide](https://developers.cloudflare.com/workers/framework-guides/web-apps/opennext/), [OpenNext setup](https://opennext.js.org/cloudflare/get-started), [Workers Builds configuration](https://developers.cloudflare.com/workers/ci-cd/builds/configuration/), [Worker rate limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).
